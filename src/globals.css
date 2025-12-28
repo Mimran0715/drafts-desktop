@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Default theme - Parchment */
+  --background: #faf8f3;
+  --foreground: #1a1a1a;
+  
+  /* Rounded corners */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  /* Sidebar colors */
+  --sidebar-bg: #f5f3ed; /* light cream */
+  --sidebar-border: #e8e4d9; /* cream border */
+  --sidebar-text: #1a1a1a; /* near black */
+  --sidebar-text-muted: #6b6b6b; /* medium gray */
+  --sidebar-item-bg: #eae6da; /* cream gray */
+  --sidebar-item-hover: #ddd9cc; /* darker cream */
+  --sidebar-item-selected: #2a2a2a; /* charcoal black */
+  
+  /* Editor colors */
+  --editor-bg: #fffef9; /* warm white/cream */
+  --editor-text: #1a1a1a; /* near black */
+  --editor-text-muted: #999999; /* light gray */
+  --editor-toolbar-bg: #f5f3ed; /* light cream */
+  
+  /* Chat colors */
+  --chat-bg: #f5f3ed; /* light cream */
+  --chat-user-bg: #2a2a2a; /* charcoal black */
+  --chat-user-text: #faf8f3; /* cream white */
+  --chat-agent-bg: #eae6da; /* cream gray */
+  --chat-agent-text: #1a1a1a; /* near black */
+  
+  /* Button colors */
+  --btn-primary-bg: #2a2a2a; /* charcoal black */
+  --btn-primary-hover: #3d3d3d; /* lighter charcoal */
+  --btn-secondary-bg: #eae6da; /* cream gray */
+  --btn-secondary-hover: #ddd9cc; /* darker cream */
+  
+  /* Border colors */
+  --border-main: #e8e4d9; /* cream border */
+  --border-input: #d4cfc0; /* medium cream */
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  
+  --sidebar-bg: #1c1917;
+  --sidebar-border: #292524;
+  --sidebar-text: #e7e5e4;
+  --sidebar-text-muted: #a8a29e;
+  --sidebar-item-bg: #292524;
+  --sidebar-item-hover: #44403c;
+  --sidebar-item-selected: #d97706;
+  
+  --editor-bg: #1c1917;
+  --editor-text: #e7e5e4;
+  --editor-text-muted: #78716c;
+  --editor-toolbar-bg: #292524;
+  
+  --chat-bg: #1c1917;
+  --chat-user-bg: #d97706;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #292524;
+  --chat-agent-text: #e7e5e4;
+  
+  --btn-primary-bg: #d97706;
+  --btn-primary-hover: #f59e0b;
+  --btn-secondary-bg: #292524;
+  --btn-secondary-hover: #44403c;
+  
+  --border-main: #292524;
+  --border-input: #44403c;
+}
+
+/* Rose theme */
+[data-theme="rose"] {
+  --sidebar-bg: #EEC8CF; /* soft rose pink */
+  --sidebar-border: #CE8A97; /* medium rose */
+  --sidebar-text: #412722; /* deep brown */
+  --sidebar-text-muted: #634A45; /* brown-gray */
+  --sidebar-item-bg: #f5d9de; /* lighter rose */
+  --sidebar-item-hover: #e5b8c1; /* hover rose */
+  --sidebar-item-selected: #AE5969; /* dusty rose accent */
+  
+  --editor-bg: #faf8f6; /* cream */
+  --editor-text: #412722; /* deep brown */
+  --editor-text-muted: #CE8A97; /* medium rose */
+  --editor-toolbar-bg: #f8ebe8; /* light cream-rose */
+  
+  --chat-bg: #EEC8CF;
+  --chat-user-bg: #AE5969;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #f5d9de;
+  --chat-agent-text: #412722;
+  
+  --btn-primary-bg: #AE5969;
+  --btn-primary-hover: #CE8A97;
+  --btn-secondary-bg: #f5d9de;
+  --btn-secondary-hover: #e5b8c1;
+  
+  --border-main: #CE8A97;
+  --border-input: #e5b8c1;
+}
+
+/* Forest theme */
+[data-theme="forest"] {
+  --sidebar-bg: #2d4a3e; /* dark pine green */
+  --sidebar-border: #1f3329; /* darker pine */
+  --sidebar-text: #f5f5f5; /* light gray text */
+  --sidebar-text-muted: #b8c5b8; /* lighter sage gray */
+  --sidebar-item-bg: #3a5a4a; /* medium pine */
+  --sidebar-item-hover: #4a6a59; /* lighter pine */
+  --sidebar-item-selected: #5d8370; /* forest green accent */
+  
+  --editor-bg: #ffeacf; /* cream */
+  --editor-text: #251605; /* dark gray/black */
+  --editor-text-muted: #5a5a5a; /* medium gray */
+  --editor-toolbar-bg: #f5e6d3; /* light cream */
+  --editor-toolbar-text: #2d2d2d; /* dark brown-gray for toolbar text */
+  
+  --chat-bg: #2d4a3e;
+  --chat-user-bg: #5d8370;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #3a5a4a;
+  --chat-agent-text: #f5f5f5;
+  
+  --btn-primary-bg: #5d8370;
+  --btn-primary-hover: #6d9380;
+  --btn-secondary-bg: #5d8370;;
+  --btn-secondary-hover: #6d9380;
+  
+  --border-main: #1f3329;
+  --border-input: #4a6a59;
+}
+
+/* Monochrome theme */
+[data-theme="monochrome"] {
+  --sidebar-bg: #f3f4f6; /* gray-100 */
+  --sidebar-border: #e5e7eb; /* gray-200 */
+  --sidebar-text: #111827; /* gray-900 */
+  --sidebar-text-muted: #6b7280; /* gray-500 */
+  --sidebar-item-bg: #e5e7eb;
+  --sidebar-item-hover: #d1d5db; /* gray-300 */
+  --sidebar-item-selected: #374151; /* gray-700 */
+  
+  --editor-bg: #ffffff;
+  --editor-text: #111827;
+  --editor-text-muted: #9ca3af;
+  --editor-toolbar-bg: #f9fafb; /* gray-50 */
+  
+  --chat-bg: #f3f4f6;
+  --chat-user-bg: #374151;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #e5e7eb;
+  --chat-agent-text: #111827;
+  
+  --btn-primary-bg: #374151;
+  --btn-primary-hover: #1f2937;
+  --btn-secondary-bg: #e5e7eb;
+  --btn-secondary-hover: #d1d5db;
+  
+  --border-main: #e5e7eb;
+  --border-input: #d1d5db;
+}
+
+/* Starry Night theme */
+[data-theme="starry"] {
+  --sidebar-bg: #173679; /* deep blue */
+  --sidebar-border: #0B1E38; /* darker blue */
+  --sidebar-text: #ffcb05; /* muted gold */
+  --sidebar-text-muted: #7FC5DC; /* light blue */
+  --sidebar-item-bg: #4888C8; /* medium blue */
+  --sidebar-item-hover: #5FA0E0; /* lighter blue */
+  --sidebar-item-selected: #ffcb05; /* orange accent */
+  
+  --editor-bg: #FFFEF5; /* cream */
+  --editor-text: #173679; /* deep blue */
+  --editor-text-muted: #4888C8; /* medium blue */
+  --editor-toolbar-bg: #FFF9E6; /* light cream */
+  --editor-toolbar-text: #173679; /* deep blue */
+  
+  --chat-bg: #173679;
+  --chat-user-bg: #ffcb05;
+  --chat-user-text: #173679;
+  --chat-agent-bg: #4888C8;
+  --chat-agent-text: #ffffff;
+  
+  --btn-primary-bg: #ffcb05;
+  --btn-primary-hover: #C19A2E;
+  --btn-secondary-bg: #4888C8;
+  --btn-secondary-hover: #5FA0E0;
+  
+  --border-main: #0B1E38;
+  --border-input: #5FA0E0;
+}
+
+/* Lilac theme */
+[data-theme="lilac"] {
+  --sidebar-bg: #D4CFEA; /* cool lavender */
+  --sidebar-border: #B5A9D6; /* cool lilac */
+  --sidebar-text: #3A2F52; /* deep cool purple */
+  --sidebar-text-muted: #6B5B8C; /* cool purple-gray */
+  --sidebar-item-bg: #C4B9E0; /* medium cool lilac */
+  --sidebar-item-hover: #B5A9D6; /* hover lilac */
+  --sidebar-item-selected: #8B76C1; /* cool purple accent */
+  
+  --editor-bg: #F8F7FD; /* very light cool lavender */
+  --editor-text: #3A2F52; /* deep cool purple */
+  --editor-text-muted: #8B76C1; /* cool purple */
+  --editor-toolbar-bg: #EFEDF7; /* light cool lavender */
+  --editor-toolbar-text: #3A2F52; /* deep cool purple */
+  
+  --chat-bg: #D4CFEA;
+  --chat-user-bg: #8B76C1;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #C4B9E0;
+  --chat-agent-text: #3A2F52;
+  
+  --btn-primary-bg: #8B76C1;
+  --btn-primary-hover: #7562A8;
+  --btn-secondary-bg: #C4B9E0;
+  --btn-secondary-hover: #B5A9D6;
+  
+  --border-main: #B5A9D6;
+  --border-input: #C4B9E0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Softer UI elements */
+* {
+  border-radius: inherit;
+}
+
+button {
+  border-radius: var(--radius-md);
+}
+
+input, textarea, select {
+  border-radius: var(--radius-md);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg) !important;
+}
+
+.rounded {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Smooth transitions */
+button, input, textarea, select {
+  transition: all 0.2s ease;
+}
+
+/* Better shadows */
+.shadow-sm {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
