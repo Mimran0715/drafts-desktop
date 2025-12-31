@@ -1,16 +1,51 @@
-# React + Vite
+# ✏️ Drafts
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A beautiful desktop writing app with an AI companion to help you write better.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Clean Writing Interface** - Distraction-free editor with customizable fonts and spacing
+- **AI Writing Companion** - Get suggestions, brainstorm ideas, and improve your writing
+- **Project Management** - Organize your work into projects with multiple files
+- **Beautiful Themes** - 7 carefully crafted themes (Letter, Dark, Rose, Forest, Stars, Lavender, Mono)
+- **Export Options** - Save as TXT, DOCX, or PDF
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Create a new project or open an existing folder
+2. Start writing in the editor
+3. Select any text and ask your AI companion for help
+4. Export your work when ready
 
-## Expanding the ESLint configuration
+## Keyboard Shortcuts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `Enter` - Send message to AI
+- `Shift + Enter` - New line in chat
+- `Cmd/Ctrl + B` - Toggle Files sidebar
+- `Cmd/Ctrl + J` - Toggle Chat sidebar
+
+## Interface
+
+- **Left Sidebar** - Projects and files
+- **Center Panel** - Your writing editor
+- **Right Sidebar** - AI chat companion
+- **Top Right** - Settings and profile
+
+## Customization
+
+Click the ⚙️ Settings icon to:
+- Change themes
+- Toggle panel visibility
+- View keyboard shortcuts
+- Adjust font and spacing
+
+## Tech Stack
+
+- Electron
+- React
+- TypeScript
+- Tailwind CSS
+
+---
+
+Happy writing! 📝
