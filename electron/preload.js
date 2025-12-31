@@ -12,4 +12,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // AI chat
   chat: (message, context) => ipcRenderer.invoke('chat', message, context),
+  
+  // Database - Recent projects
+  getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
+  addRecentProject: (projectId, name, projectPath) => ipcRenderer.invoke('add-recent-project', projectId, name, projectPath),
+  
+  // Database - Conversations
+  getConversationHistory: (threadId) => ipcRenderer.invoke('get-conversation-history', threadId),
+  getProjectConversations: (projectPath) => ipcRenderer.invoke('get-project-conversations', projectPath),
+  
+  // Database - Preferences
+  getPreference: (key, defaultValue) => ipcRenderer.invoke('get-preference', key, defaultValue),
+  setPreference: (key, value) => ipcRenderer.invoke('set-preference', key, value),
 });

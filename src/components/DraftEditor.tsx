@@ -1,5 +1,3 @@
-// 'use client';
-
 import { useState, useEffect } from 'react';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
@@ -508,7 +506,7 @@ export default function DraftEditor({
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  📝 Word (.docx)
+                  📘 Word (.docx)
                 </button>
                 <button
                   onClick={handleExportPdf}
@@ -556,7 +554,6 @@ export default function DraftEditor({
       <div className="flex-1 p-8 overflow-y-auto">
         {activeTab ? (
           <textarea
-            key={activeTab.id}
             value={activeTab.content}
             onChange={(e) => handleContentChange(e.target.value)}
             placeholder="Start writing your story here...
@@ -584,31 +581,6 @@ Select any text and ask your AI companion for help."
           </div>
         )}
       </div>
-      
-      {/* <style jsx>{`
-        textarea::placeholder {
-          color: var(--editor-text-muted);
-        }
-        input[type="range"]::-webkit-slider-thumb {
-          appearance: none;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: var(--btn-primary-bg);
-          cursor: pointer;
-          border: 2px solid var(--editor-bg);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        input[type="range"]::-moz-range-thumb {
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: var(--btn-primary-bg);
-          cursor: pointer;
-          border: 2px solid var(--editor-bg);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-      `}</style> */}
     </div>
   );
 }
