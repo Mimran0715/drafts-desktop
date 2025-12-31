@@ -2,6 +2,11 @@
 
 A beautiful desktop writing app with an AI companion to help you write better.
 
+
+
+https://github.com/user-attachments/assets/d17c5b21-202e-4736-b883-71a7adc05b97
+
+
 ## Features
 
 - **Clean Writing Interface** - Distraction-free editor with customizable fonts and spacing
