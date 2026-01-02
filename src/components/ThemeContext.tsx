@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'warm' | 'dark' | 'rose' | 'forest' | 'starry' | 'lilac' | 'monochrome';
+type Theme = 'warm' | 'dark' | 'rose' | 'forest' | 'starry' | 'lilac' | 'monochrome' | 'sepia' 
+| 'espresso' | 'midnight' | 'sage' | 'amber' | 'cherry' | 'ocean' | 'slate' ;
 
 interface ThemeContextType {
   theme: Theme;

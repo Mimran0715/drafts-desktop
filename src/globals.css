@@ -139,6 +139,38 @@
   --border-input: #4a6a59;
 }
 
+/* Sepia theme - Warm, vintage writing experience */
+[data-theme="sepia"] {
+  --sidebar-bg: #d4c5a9; /* warm tan */
+  --sidebar-border: #b8a887; /* medium tan */
+  --sidebar-text: #3d2f1f; /* dark brown */
+  --sidebar-text-muted: #6b5d4f; /* medium brown */
+  --sidebar-item-bg: #c4b59a; /* darker tan */
+  --sidebar-item-hover: #b8a887; /* hover tan */
+  --sidebar-item-selected: #8b6f47; /* brown accent */
+  
+  --editor-bg: #f4ecd8; /* cream sepia */
+  --editor-text: #2a1f14; /* very dark brown */
+  --editor-text-muted: #8b7355; /* muted brown */
+  --editor-toolbar-bg: #e8ddc5; /* warm cream */
+  --editor-toolbar-text: #3d2f1f; /* dark brown */
+  
+  --chat-bg: #d4c5a9;
+  --chat-user-bg: #8b6f47;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #c4b59a;
+  --chat-agent-text: #3d2f1f;
+  
+  --btn-primary-bg: #8b6f47;
+  --btn-primary-hover: #a0865c;
+  --btn-secondary-bg: #c4b59a;
+  --btn-secondary-hover: #b8a887;
+  
+  --border-main: #b8a887;
+  --border-input: #c4b59a;
+}
+
+
 /* Monochrome theme */
 [data-theme="monochrome"] {
   --sidebar-bg: #f3f4f6; /* gray-100 */
@@ -168,6 +200,7 @@
   --border-main: #e5e7eb;
   --border-input: #d1d5db;
 }
+
 
 /* Starry Night theme */
 [data-theme="starry"] {
@@ -229,6 +262,224 @@
   
   --border-main: #B5A9D6;
   --border-input: #C4B9E0;
+}
+
+
+/* Ocean theme - Cool, calming blue tones */
+[data-theme="ocean"] {
+  --sidebar-bg: #2c5f7c; /* deep ocean blue */
+  --sidebar-border: #1f4558; /* darker ocean */
+  --sidebar-text: #e8f4f8; /* light cyan */
+  --sidebar-text-muted: #a8d8e8; /* soft blue */
+  --sidebar-item-bg: #3a7190; /* medium ocean blue */
+  --sidebar-item-hover: #4a89a8; /* lighter ocean */
+  --sidebar-item-selected: #5ba8c8; /* bright cyan accent */
+  
+  --editor-bg: #fafcfd; /* very light blue-white */
+  --editor-text: #1a3544; /* deep blue-gray */
+  --editor-text-muted: #5a7a8a; /* medium blue-gray */
+  --editor-toolbar-bg: #f0f7fa; /* light blue-white */
+  --editor-toolbar-text: #1a3544; /* deep blue-gray */
+  
+  --chat-bg: #2c5f7c;
+  --chat-user-bg: #5ba8c8;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #3a7190;
+  --chat-agent-text: #e8f4f8;
+  
+  --btn-primary-bg: #5ba8c8;
+  --btn-primary-hover: #4a89a8;
+  --btn-secondary-bg: #3a7190;
+  --btn-secondary-hover: #4a89a8;
+  
+  --border-main: #1f4558;
+  --border-input: #4a89a8;
+}
+
+/* Midnight theme - Deep, sophisticated dark blues */
+[data-theme="midnight"] {
+  --sidebar-bg: #1a1f3a; /* deep midnight blue */
+  --sidebar-border: #0f1225; /* darker midnight */
+  --sidebar-text: #d4d8e8; /* light periwinkle */
+  --sidebar-text-muted: #8891b8; /* muted blue */
+  --sidebar-item-bg: #252c4d; /* medium midnight */
+  --sidebar-item-hover: #2f3a5a; /* lighter midnight */
+  --sidebar-item-selected: #5865f2; /* bright blue accent */
+  
+  --editor-bg: #0f1225; /* dark midnight */
+  --editor-text: #d4d8e8; /* light periwinkle */
+  --editor-text-muted: #6b7399; /* muted periwinkle */
+  --editor-toolbar-bg: #1a1f3a; /* deep midnight */
+  --editor-toolbar-text: #d4d8e8; /* light periwinkle */
+  
+  --chat-bg: #1a1f3a;
+  --chat-user-bg: #5865f2;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #252c4d;
+  --chat-agent-text: #d4d8e8;
+  
+  --btn-primary-bg: #5865f2;
+  --btn-primary-hover: #4752c4;
+  --btn-secondary-bg: #252c4d;
+  --btn-secondary-hover: #2f3a5a;
+  
+  --border-main: #0f1225;
+  --border-input: #2f3a5a;
+}
+
+/* Sage theme - Soft, natural greens */
+[data-theme="sage"] {
+  --sidebar-bg: #c8d5b9; /* soft sage green */
+  --sidebar-border: #a8b89a; /* medium sage */
+  --sidebar-text: #2f3e2a; /* dark forest green */
+  --sidebar-text-muted: #5a6b52; /* medium forest */
+  --sidebar-item-bg: #b8c9a7; /* darker sage */
+  --sidebar-item-hover: #a8b89a; /* hover sage */
+  --sidebar-item-selected: #6b8556; /* forest accent */
+  
+  --editor-bg: #f8faf5; /* very light sage */
+  --editor-text: #2a3624; /* very dark green */
+  --editor-text-muted: #6b7a62; /* muted green */
+  --editor-toolbar-bg: #eef2e8; /* light sage */
+  --editor-toolbar-text: #2f3e2a; /* dark forest green */
+  
+  --chat-bg: #c8d5b9;
+  --chat-user-bg: #6b8556;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #b8c9a7;
+  --chat-agent-text: #2f3e2a;
+  
+  --btn-primary-bg: #6b8556;
+  --btn-primary-hover: #7a9665;
+  --btn-secondary-bg: #b8c9a7;
+  --btn-secondary-hover: #a8b89a;
+  
+  --border-main: #a8b89a;
+  --border-input: #b8c9a7;
+}
+
+/* Amber theme - Warm, golden tones */
+[data-theme="amber"] {
+  --sidebar-bg: #e8c58a; /* warm amber */
+  --sidebar-border: #d4a76a; /* medium amber */
+  --sidebar-text: #3d2a1a; /* dark brown */
+  --sidebar-text-muted: #6b5240; /* medium brown */
+  --sidebar-item-bg: #ddb878; /* darker amber */
+  --sidebar-item-hover: #d4a76a; /* hover amber */
+  --sidebar-item-selected: #c18c3f; /* gold accent */
+  
+  --editor-bg: #fffbf5; /* cream */
+  --editor-text: #2d1f10; /* very dark brown */
+  --editor-text-muted: #8b6f47; /* muted brown */
+  --editor-toolbar-bg: #faf3e8; /* light cream */
+  --editor-toolbar-text: #3d2a1a; /* dark brown */
+  
+  --chat-bg: #e8c58a;
+  --chat-user-bg: #c18c3f;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #ddb878;
+  --chat-agent-text: #3d2a1a;
+  
+  --btn-primary-bg: #c18c3f;
+  --btn-primary-hover: #d4a354;
+  --btn-secondary-bg: #ddb878;
+  --btn-secondary-hover: #d4a76a;
+  
+  --border-main: #d4a76a;
+  --border-input: #ddb878;
+}
+
+/* Cherry Blossom theme - Soft pink and white */
+[data-theme="cherry"] {
+  --sidebar-bg: #f5d4e0; /* soft pink */
+  --sidebar-border: #e5b8cc; /* medium pink */
+  --sidebar-text: #4a2533; /* deep rose-brown */
+  --sidebar-text-muted: #7a4d5f; /* medium rose */
+  --sidebar-item-bg: #edc4d4; /* darker pink */
+  --sidebar-item-hover: #e5b8cc; /* hover pink */
+  --sidebar-item-selected: #c97890; /* rose accent */
+  
+  --editor-bg: #fffafc; /* very light pink-white */
+  --editor-text: #3a1f2a; /* very dark rose */
+  --editor-text-muted: #9a6b7f; /* muted rose */
+  --editor-toolbar-bg: #fdf0f5; /* light pink-white */
+  --editor-toolbar-text: #4a2533; /* deep rose-brown */
+  
+  --chat-bg: #f5d4e0;
+  --chat-user-bg: #c97890;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #edc4d4;
+  --chat-agent-text: #4a2533;
+  
+  --btn-primary-bg: #c97890;
+  --btn-primary-hover: #d88fa5;
+  --btn-secondary-bg: #edc4d4;
+  --btn-secondary-hover: #e5b8cc;
+  
+  --border-main: #e5b8cc;
+  --border-input: #edc4d4;
+}
+
+/* Slate theme - Professional gray-blue */
+[data-theme="slate"] {
+  --sidebar-bg: #cbd5e1; /* light slate */
+  --sidebar-border: #94a3b8; /* medium slate */
+  --sidebar-text: #1e293b; /* dark slate */
+  --sidebar-text-muted: #475569; /* medium-dark slate */
+  --sidebar-item-bg: #b8c7db; /* darker slate */
+  --sidebar-item-hover: #94a3b8; /* hover slate */
+  --sidebar-item-selected: #3b82f6; /* blue accent */
+  
+  --editor-bg: #f8fafc; /* very light slate */
+  --editor-text: #0f172a; /* very dark slate */
+  --editor-text-muted: #64748b; /* muted slate */
+  --editor-toolbar-bg: #f1f5f9; /* light slate */
+  --editor-toolbar-text: #1e293b; /* dark slate */
+  
+  --chat-bg: #cbd5e1;
+  --chat-user-bg: #3b82f6;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #b8c7db;
+  --chat-agent-text: #1e293b;
+  
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --btn-secondary-bg: #b8c7db;
+  --btn-secondary-hover: #94a3b8;
+  
+  --border-main: #94a3b8;
+  --border-input: #b8c7db;
+}
+
+/* Espresso theme - Rich coffee browns */
+[data-theme="espresso"] {
+  --sidebar-bg: #3e2723; /* dark espresso */
+  --sidebar-border: #2c1810; /* darker espresso */
+  --sidebar-text: #efebe9; /* cream */
+  --sidebar-text-muted: #bcaaa4; /* light brown */
+  --sidebar-item-bg: #4e342e; /* medium espresso */
+  --sidebar-item-hover: #5d4037; /* lighter espresso */
+  --sidebar-item-selected: #8d6e63; /* mocha accent */
+  
+  --editor-bg: #f5f0ed; /* cream */
+  --editor-text: #2c1810; /* very dark brown */
+  --editor-text-muted: #6d4c41; /* medium brown */
+  --editor-toolbar-bg: #ebe4e0; /* light cream */
+  --editor-toolbar-text: #3e2723; /* dark espresso */
+  
+  --chat-bg: #3e2723;
+  --chat-user-bg: #8d6e63;
+  --chat-user-text: #ffffff;
+  --chat-agent-bg: #4e342e;
+  --chat-agent-text: #efebe9;
+  
+  --btn-primary-bg: #8d6e63;
+  --btn-primary-hover: #a1887f;
+  --btn-secondary-bg: #4e342e;
+  --btn-secondary-hover: #5d4037;
+  
+  --border-main: #2c1810;
+  --border-input: #5d4037;
 }
 
 @theme inline {

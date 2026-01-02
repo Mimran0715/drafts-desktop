@@ -527,7 +527,7 @@ export default function DraftEditor({
             )}
           </div>
           
-          <button 
+          {/* <button 
             onClick={() => activeTab && onContentChange(activeTab.id, '')}
             className="px-4 py-2 text-sm border font-medium transition-all shadow-sm"
             style={{
@@ -546,7 +546,7 @@ export default function DraftEditor({
             }}
           >
             Clear
-          </button>
+          </button> */}
         </div>
       </div>
 

@@ -12,7 +12,8 @@ interface PageLayoutProps {
 export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayoutProps) {
   const [filesCollapsed, setFilesCollapsed] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   
   const { theme, setTheme } = useTheme();
 
@@ -24,6 +25,14 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
     { id: 'starry', name: 'Stars', icon: '⭐' },
     { id: 'lilac', name: 'Lavender', icon: '💜' },
     { id: 'monochrome', name: 'Mono', icon: '⚫' },
+    { id: 'sepia', name: 'Sepia', icon: '⚫' },
+    { id: 'sage', name: 'Sage', icon: '⚫' },
+    { id: 'amber', name: 'Amber', icon: '⚫' },
+    { id: 'cherry', name: 'Cherry Blossom', icon: '⚫' },
+    { id: 'slate', name: 'Slate', icon: '⚫' },
+    { id: 'ocean', name: 'Ocean', icon: '⚫' },
+    { id: 'midnight', name: 'Midnight', icon: '⚫' },
+    { id: 'espresso', name: 'Espresso', icon: '⚫' },
   ];
 
   return (
@@ -43,112 +52,243 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
           </span>
         </div>
         
-        <div className="flex gap-2">
+        {/* Settings and Profile Icons */}
+        <div className="flex items-center gap-3">
+          {/* Settings Icon */}
           <div className="relative">
             <button
-              onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className="px-4 py-2.5 text-sm font-medium transition-all shadow-sm"
+              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all shadow-sm"
               style={{
                 background: 'var(--btn-secondary-bg)',
                 color: 'var(--sidebar-text)',
-                borderRadius: 'var(--radius-md)'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.transform = 'scale(1.05)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.transform = 'scale(1)';
                 e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
               }}
+              title="Settings"
             >
-              🎨 Theme
+              ⚙️
             </button>
             
-            {showThemeMenu && (
+            {showSettingsMenu && (
               <div 
-                className="absolute right-0 mt-2 py-2 shadow-lg z-50 min-w-[180px]"
+                className="absolute right-0 mt-2 py-2 shadow-lg z-50 min-w-[220px]"
                 style={{
                   background: 'var(--sidebar-bg)',
                   border: '1px solid var(--border-main)',
                   borderRadius: 'var(--radius-lg)'
                 }}
               >
-                {themes.map((t) => (
+                {/* Theme Section */}
+                <div className="px-3 py-2">
+                  <div 
+                    className="text-xs font-semibold mb-2"
+                    style={{ color: 'var(--sidebar-text-muted)' }}
+                  >
+                    THEME
+                  </div>
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setTheme(t.id as any);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                      style={{
+                        background: theme === t.id ? 'var(--sidebar-item-selected)' : 'transparent',
+                        color: theme === t.id ? 'var(--chat-user-text)' : 'var(--sidebar-text)',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (theme !== t.id) {
+                          e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (theme !== t.id) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <span>{t.icon}</span>
+                      <span>{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="border-t my-2" style={{ borderColor: 'var(--border-main)' }}></div>
+                
+                {/* View Options */}
+                <div className="px-3 py-2">
+                  <div 
+                    className="text-xs font-semibold mb-2"
+                    style={{ color: 'var(--sidebar-text-muted)' }}
+                  >
+                    VIEW
+                  </div>
                   <button
-                    key={t.id}
                     onClick={() => {
-                      setTheme(t.id as any);
-                      setShowThemeMenu(false);
+                      setFilesCollapsed(!filesCollapsed);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
                     style={{
-                      background: theme === t.id ? 'var(--sidebar-item-selected)' : 'transparent',
-                      color: theme === t.id ? 'var(--chat-user-text)' : 'var(--sidebar-text)'
+                      color: 'var(--sidebar-text)',
+                      borderRadius: 'var(--radius-sm)'
                     }}
                     onMouseEnter={(e) => {
-                      if (theme !== t.id) {
-                        e.currentTarget.style.background = 'var(--sidebar-item-hover)';
-                      }
+                      e.currentTarget.style.background = 'var(--sidebar-item-hover)';
                     }}
                     onMouseLeave={(e) => {
-                      if (theme !== t.id) {
-                        e.currentTarget.style.background = 'transparent';
-                      }
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <span>{t.icon}</span>
-                    <span>{t.name}</span>
+                    <span>📁</span>
+                    <span>{filesCollapsed ? 'Show Files' : 'Hide Files'}</span>
                   </button>
-                ))}
+                  <button
+                    onClick={() => {
+                      setChatCollapsed(!chatCollapsed);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                    style={{
+                      color: 'var(--sidebar-text)',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span>💬</span>
+                    <span>{chatCollapsed ? 'Show Chat' : 'Hide Chat'}</span>
+                  </button>
+                </div>
+                
+                <div className="border-t my-2" style={{ borderColor: 'var(--border-main)' }}></div>
+                
+                {/* Other Settings */}
+                <button
+                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  ⌨️ Keyboard Shortcuts
+                </button>
+                
+                <button
+                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  ℹ️ About
+                </button>
               </div>
             )}
           </div>
-          
-          <button
-            onClick={() => setFilesCollapsed(!filesCollapsed)}
-            className="px-4 py-2.5 text-sm font-medium transition-all shadow-sm"
-            style={{
-              background: 'var(--btn-secondary-bg)',
-              color: 'var(--sidebar-text)',
-              borderRadius: 'var(--radius-md)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-            }}
-          >
-            {filesCollapsed ? '📂 Show Files' : '📂 Hide Files'}
-          </button>
-          <button
-            onClick={() => setChatCollapsed(!chatCollapsed)}
-            className="px-4 py-2.5 text-sm font-medium transition-all shadow-sm"
-            style={{
-              background: 'var(--btn-secondary-bg)',
-              color: 'var(--sidebar-text)',
-              borderRadius: 'var(--radius-md)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-            }}
-          >
-            {chatCollapsed ? '💬 Show Chat' : '💬 Hide Chat'}
-          </button>
+
+          {/* Profile Icon */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-all shadow-sm"
+              style={{
+                background: 'var(--btn-primary-bg)',
+                color: 'var(--chat-user-text)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
+              }}
+              title="Profile & Account"
+            >
+              👤
+            </button>
+            
+            {showProfileMenu && (
+              <div 
+                className="absolute right-0 mt-2 py-2 shadow-lg z-50 min-w-[200px]"
+                style={{
+                  background: 'var(--sidebar-bg)',
+                  border: '1px solid var(--border-main)',
+                  borderRadius: 'var(--radius-lg)'
+                }}
+              >
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                  <div className="font-medium text-sm" style={{ color: 'var(--sidebar-text)' }}>
+                    User Name
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--sidebar-text-muted)' }}>
+                    user@example.com
+                  </div>
+                </div>
+                
+                <button
+                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  👤 Profile
+                </button>
+                
+                <button
+                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  💳 Subscription
+                </button>
+                
+                <div className="border-t my-1" style={{ borderColor: 'var(--border-main)' }}></div>
+                
+                <button
+                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  style={{ color: '#dc2626' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  🚪 Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -156,7 +296,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Files */}
         <aside 
-          className={`border-r overflow-hidden transition-all duration-300 ${
+          className={`border-r overflow-hidden transition-all duration-300 flex flex-col ${
             filesCollapsed ? 'w-12' : 'w-64'
           }`}
           style={{
@@ -183,7 +323,8 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col">
+            <>
+              {/* Files Header with collapse button */}
               <div 
                 className="flex items-center justify-between p-4 border-b"
                 style={{ borderColor: 'var(--border-main)' }}
@@ -202,10 +343,12 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                   </svg>
                 </button>
               </div>
+              
+              {/* Files Content */}
               <div className="flex-1 overflow-hidden">
                 {filesSidebar}
               </div>
-            </div>
+            </>
           )}
         </aside>
 

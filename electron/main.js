@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const mammoth = require('mammoth');
-const { runSimpleAgent } = require('./agent.js');
+const { runAgent } = require('./agent/index.js'); // NEW: Multi-node agent
 const db = require('./database.js');
 
 let mainWindow;
@@ -158,31 +158,35 @@ ipcMain.handle('create-document', async (event, folderPath, filename) => {
   }
 });
 
-// Chat with AI using LangChain + Ollama
+// Chat with AI using the multi-node agent
 ipcMain.handle('chat', async (event, message, context) => {
   try {
     console.log('Chat message:', message);
     console.log('Context:', context);
     
-    // Generate thread ID if not provided
-    const threadId = context.threadId || `thread_${Date.now()}`;
-    const projectPath = context.projectPath || 'no-project';
+    // Extract context info
+    const userId = context.userId || 'default-user';
+    const projectPath = context.projectPath || context.currentDocument?.path?.split(path.sep).slice(0, -1).join(path.sep) || '';
+    const activeDocumentPath = context.currentDocument?.path || '';
+    const threadId = context.threadId || null;
     
-    // Save user message to database
-    db.saveMessage(projectPath, threadId, 'user', message);
+    console.log('Prepared context:', {
+      userId,
+      projectPath,
+      activeDocumentPath,
+      threadId
+    });
     
-    const response = await runSimpleAgent(message, context);
+    // Run the multi-node agent
+    const result = await runAgent({
+      message,
+      userId,
+      projectPath,
+      activeDocumentPath,
+      threadId
+    });
     
-    // Save agent response to database
-    db.saveMessage(projectPath, threadId, 'agent', response);
-    
-    console.log('Agent response:', response);
-    
-    return {
-      response: response,
-      threadId: threadId,
-      timestamp: new Date(),
-    };
+    return result;
   } catch (error) {
     console.error('Error in chat:', error);
     
