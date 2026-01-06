@@ -1,8 +1,10 @@
 const { ChatOllama } = require('@langchain/ollama');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 
+const MODEL = "llama3.2";
+
 const model = new ChatOllama({
-  model: 'llama3.1',
+  model: MODEL,
   temperature: 0.7,
 });
 

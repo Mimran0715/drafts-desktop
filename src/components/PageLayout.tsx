@@ -21,18 +21,9 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
     { id: 'warm', name: 'Letter', icon: '🖊️' },
     { id: 'dark', name: 'Dark', icon: '🌙' },
     { id: 'rose', name: 'Rose', icon: '🌹' },
-    { id: 'forest', name: 'Forest', icon: '🌲' },
-    { id: 'starry', name: 'Stars', icon: '⭐' },
-    { id: 'lilac', name: 'Lavender', icon: '💜' },
-    { id: 'monochrome', name: 'Mono', icon: '⚫' },
-    { id: 'sepia', name: 'Sepia', icon: '⚫' },
-    { id: 'sage', name: 'Sage', icon: '⚫' },
-    { id: 'amber', name: 'Amber', icon: '⚫' },
-    { id: 'cherry', name: 'Cherry Blossom', icon: '⚫' },
-    { id: 'slate', name: 'Slate', icon: '⚫' },
-    { id: 'ocean', name: 'Ocean', icon: '⚫' },
-    { id: 'midnight', name: 'Midnight', icon: '⚫' },
-    { id: 'espresso', name: 'Espresso', icon: '⚫' },
+    { id: 'sage', name: 'Sage', icon: '🍃' },
+    { id: 'ocean', name: 'Ocean', icon: '🌊' },
+    { id: 'midnight', name: 'Midnight', icon: '🌌' },
   ];
 
   return (
@@ -212,8 +203,8 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-all shadow-sm"
               style={{
-                background: 'var(--btn-primary-bg)',
-                color: 'var(--chat-user-text)',
+                background: 'var(--btn-secondary-bg)',
+                color: 'var(--sidebar-text)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
@@ -259,7 +250,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                   👤 Profile
                 </button>
                 
-                <button
+                {/* <button
                   className="w-full px-4 py-2 text-left text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => {
@@ -270,7 +261,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                   }}
                 >
                   💳 Subscription
-                </button>
+                </button> */}
                 
                 <div className="border-t my-1" style={{ borderColor: 'var(--border-main)' }}></div>
                 

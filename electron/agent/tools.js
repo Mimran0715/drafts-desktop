@@ -5,8 +5,10 @@ const fs = require('fs').promises;
 const path = require('path');
 const { ChatOllama } = require('@langchain/ollama');
 
+const MODEL = "llama3.2";
+
 const model = new ChatOllama({
-  model: 'llama3.1',
+  model: MODEL,
   temperature: 0.7,
 });
 
@@ -71,12 +73,25 @@ async function loadDocument(documentPath) {
  * Search for relevant content across project documents
  * @param {string} query - Search query
  * @param {string} projectPath - Project folder path
+ * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Search results with relevant excerpts
  */
-async function searchContext(query, projectPath) {
+async function searchContext(query, projectPath, liveContent = null) {
   console.log(`🔍 Searching for: "${query}" in project: ${projectPath}`);
   
   const documents = await loadProjectDocuments(projectPath);
+  
+  // Add live content if provided
+  if (liveContent && liveContent.content) {
+    documents.push({
+      name: liveContent.name || 'Current Draft',
+      path: liveContent.path || 'active-document',
+      content: liveContent.content,
+      modified: new Date(),
+      isLive: true
+    });
+    console.log('📝 Added live content from editor');
+  }
   
   if (documents.length === 0) {
     return {
@@ -125,7 +140,7 @@ async function searchContext(query, projectPath) {
     
     if (relevanceScore > 0) {
       results.push({
-        documentName: doc.name,
+        documentName: doc.name + (doc.isLive ? ' (Current Draft)' : ''),
         documentPath: doc.path,
         relevanceScore,
         matches: matchedLines.slice(0, 5) // Limit to top 5 matches per doc
@@ -148,31 +163,50 @@ async function searchContext(query, projectPath) {
  * Analyze the active draft document
  * @param {string} documentPath - Path to document to analyze
  * @param {string} projectPath - Project folder path
+ * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Analysis results
  */
-async function analyzeDraft(documentPath, projectPath) {
+async function analyzeDraft(documentPath, projectPath, liveContent = null) {
   console.log(`📝 Analyzing draft: ${documentPath}`);
   
-  const document = await loadDocument(documentPath);
+  let document;
   
-  if (!document) {
+  // Prefer live content over file content
+  if (liveContent && liveContent.content) {
+    console.log('✨ Using live editor content for analysis');
+    document = {
+      name: liveContent.name || path.basename(documentPath),
+      path: documentPath,
+      content: liveContent.content,
+      modified: new Date()
+    };
+  } else {
+    console.log('📂 Loading content from file');
+    document = await loadDocument(documentPath);
+  }
+  
+  if (!document || !document.content || document.content.trim().length === 0) {
     return {
       success: false,
-      message: "Could not load document for analysis"
+      message: "No content to analyze. The document appears to be empty or could not be loaded."
     };
   }
+  
+  const wordCount = document.content.split(/\s+/).filter(word => word.length > 0).length;
   
   // Use LLM to analyze the draft
   const prompt = `Analyze this writing draft and provide constructive feedback.
 
 Document: ${document.name}
+Word count: ${wordCount}
+
 Content:
 ${document.content}
 
 Provide:
 1. Strengths (what's working well)
 2. Areas for improvement
-3. Specific suggestions
+3. Specific suggestions for what could happen next or how to improve
 4. Overall assessment
 
 Be specific, constructive, and encouraging.`;
@@ -186,7 +220,7 @@ Be specific, constructive, and encouraging.`;
     return {
       success: true,
       documentName: document.name,
-      wordCount: document.content.split(/\s+/).length,
+      wordCount: wordCount,
       characterCount: document.content.length,
       analysis: response.content
     };
@@ -204,13 +238,25 @@ Be specific, constructive, and encouraging.`;
  * @param {string} userRequest - What user wants to generate
  * @param {string} projectPath - Project folder path
  * @param {string} activeDocumentPath - Active document path
+ * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Generated text
  */
-async function generateText(userRequest, projectPath, activeDocumentPath) {
+async function generateText(userRequest, projectPath, activeDocumentPath, liveContent = null) {
   console.log(`✍️ Generating text for request: "${userRequest}"`);
   
-  // Load active document for context
-  const activeDoc = await loadDocument(activeDocumentPath);
+  // Load or use live active document content
+  let activeDoc;
+  if (liveContent && liveContent.content) {
+    console.log('✨ Using live editor content for generation');
+    activeDoc = {
+      name: liveContent.name || path.basename(activeDocumentPath),
+      path: activeDocumentPath,
+      content: liveContent.content
+    };
+  } else {
+    console.log('📂 Loading active document from file');
+    activeDoc = await loadDocument(activeDocumentPath);
+  }
   
   // Load other project documents for additional context
   const allDocs = await loadProjectDocuments(projectPath);
@@ -218,8 +264,10 @@ async function generateText(userRequest, projectPath, activeDocumentPath) {
   
   let contextString = '';
   
-  if (activeDoc) {
+  if (activeDoc && activeDoc.content) {
     contextString += `\nCurrent document (${activeDoc.name}):\n${activeDoc.content}\n`;
+  } else {
+    contextString += '\nCurrent document is empty or not loaded.\n';
   }
   
   if (contextDocs.length > 0) {
@@ -251,6 +299,65 @@ Generate helpful, relevant content that matches the style and context of the exi
     return {
       success: false,
       message: "Error generating text: " + error.message
+    };
+  }
+}
+
+/**
+ * Get current context information (project, file, stats)
+ * @param {string} projectPath - Project folder path
+ * @param {string} activeDocumentPath - Active document path
+ * @param {Object} [liveContent] - Optional live content from editor
+ * @returns {Promise<Object>} Context information
+ */
+async function getContextInfo(projectPath, activeDocumentPath, liveContent = null) {
+  console.log(`📍 Getting context info for: ${activeDocumentPath}`);
+  
+  try {
+    // Get active document info
+    let activeDoc = null;
+    if (liveContent && liveContent.content) {
+      activeDoc = {
+        name: liveContent.name || path.basename(activeDocumentPath),
+        path: activeDocumentPath,
+        content: liveContent.content
+      };
+    } else if (activeDocumentPath) {
+      activeDoc = await loadDocument(activeDocumentPath);
+    }
+    
+    // Get project documents
+    const projectDocs = await loadProjectDocuments(projectPath);
+    
+    // Calculate stats
+    const activeDocStats = activeDoc ? {
+      name: activeDoc.name,
+      wordCount: activeDoc.content.split(/\s+/).filter(w => w.length > 0).length,
+      characterCount: activeDoc.content.length,
+      lineCount: activeDoc.content.split('\n').length,
+      isEmpty: activeDoc.content.trim().length === 0
+    } : null;
+    
+    const projectStats = {
+      totalDocuments: projectDocs.length,
+      documentNames: projectDocs.map(doc => doc.name),
+      totalWords: projectDocs.reduce((sum, doc) => 
+        sum + doc.content.split(/\s+/).filter(w => w.length > 0).length, 0
+      )
+    };
+    
+    return {
+      success: true,
+      projectName: path.basename(projectPath),
+      projectPath: projectPath,
+      activeDocument: activeDocStats,
+      project: projectStats
+    };
+  } catch (error) {
+    console.error('Error getting context info:', error);
+    return {
+      success: false,
+      message: "Error getting context information: " + error.message
     };
   }
 }
@@ -292,5 +399,6 @@ module.exports = {
   searchContext,
   analyzeDraft,
   generateText,
+  getContextInfo,
   askQuestion
 };

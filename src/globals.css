@@ -108,162 +108,36 @@
   --border-input: #e5b8c1;
 }
 
-/* Forest theme */
-[data-theme="forest"] {
-  --sidebar-bg: #2d4a3e; /* dark pine green */
-  --sidebar-border: #1f3329; /* darker pine */
-  --sidebar-text: #f5f5f5; /* light gray text */
-  --sidebar-text-muted: #b8c5b8; /* lighter sage gray */
-  --sidebar-item-bg: #3a5a4a; /* medium pine */
-  --sidebar-item-hover: #4a6a59; /* lighter pine */
-  --sidebar-item-selected: #5d8370; /* forest green accent */
+/* Sage theme - Soft, natural greens */
+[data-theme="sage"] {
+  --sidebar-bg: #c8d5b9; /* soft sage green */
+  --sidebar-border: #a8b89a; /* medium sage */
+  --sidebar-text: #2f3e2a; /* dark forest green */
+  --sidebar-text-muted: #5a6b52; /* medium forest */
+  --sidebar-item-bg: #b8c9a7; /* darker sage */
+  --sidebar-item-hover: #a8b89a; /* hover sage */
+  --sidebar-item-selected: #6b8556; /* forest accent */
   
-  --editor-bg: #ffeacf; /* cream */
-  --editor-text: #251605; /* dark gray/black */
-  --editor-text-muted: #5a5a5a; /* medium gray */
-  --editor-toolbar-bg: #f5e6d3; /* light cream */
-  --editor-toolbar-text: #2d2d2d; /* dark brown-gray for toolbar text */
+  --editor-bg: #f8faf5; /* very light sage */
+  --editor-text: #2a3624; /* very dark green */
+  --editor-text-muted: #6b7a62; /* muted green */
+  --editor-toolbar-bg: #eef2e8; /* light sage */
+  --editor-toolbar-text: #2f3e2a; /* dark forest green */
   
-  --chat-bg: #2d4a3e;
-  --chat-user-bg: #5d8370;
+  --chat-bg: #c8d5b9;
+  --chat-user-bg: #6b8556;
   --chat-user-text: #ffffff;
-  --chat-agent-bg: #3a5a4a;
-  --chat-agent-text: #f5f5f5;
+  --chat-agent-bg: #b8c9a7;
+  --chat-agent-text: #2f3e2a;
   
-  --btn-primary-bg: #5d8370;
-  --btn-primary-hover: #6d9380;
-  --btn-secondary-bg: #5d8370;;
-  --btn-secondary-hover: #6d9380;
+  --btn-primary-bg: #6b8556;
+  --btn-primary-hover: #7a9665;
+  --btn-secondary-bg: #b8c9a7;
+  --btn-secondary-hover: #a8b89a;
   
-  --border-main: #1f3329;
-  --border-input: #4a6a59;
+  --border-main: #a8b89a;
+  --border-input: #b8c9a7;
 }
-
-/* Sepia theme - Warm, vintage writing experience */
-[data-theme="sepia"] {
-  --sidebar-bg: #d4c5a9; /* warm tan */
-  --sidebar-border: #b8a887; /* medium tan */
-  --sidebar-text: #3d2f1f; /* dark brown */
-  --sidebar-text-muted: #6b5d4f; /* medium brown */
-  --sidebar-item-bg: #c4b59a; /* darker tan */
-  --sidebar-item-hover: #b8a887; /* hover tan */
-  --sidebar-item-selected: #8b6f47; /* brown accent */
-  
-  --editor-bg: #f4ecd8; /* cream sepia */
-  --editor-text: #2a1f14; /* very dark brown */
-  --editor-text-muted: #8b7355; /* muted brown */
-  --editor-toolbar-bg: #e8ddc5; /* warm cream */
-  --editor-toolbar-text: #3d2f1f; /* dark brown */
-  
-  --chat-bg: #d4c5a9;
-  --chat-user-bg: #8b6f47;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #c4b59a;
-  --chat-agent-text: #3d2f1f;
-  
-  --btn-primary-bg: #8b6f47;
-  --btn-primary-hover: #a0865c;
-  --btn-secondary-bg: #c4b59a;
-  --btn-secondary-hover: #b8a887;
-  
-  --border-main: #b8a887;
-  --border-input: #c4b59a;
-}
-
-
-/* Monochrome theme */
-[data-theme="monochrome"] {
-  --sidebar-bg: #f3f4f6; /* gray-100 */
-  --sidebar-border: #e5e7eb; /* gray-200 */
-  --sidebar-text: #111827; /* gray-900 */
-  --sidebar-text-muted: #6b7280; /* gray-500 */
-  --sidebar-item-bg: #e5e7eb;
-  --sidebar-item-hover: #d1d5db; /* gray-300 */
-  --sidebar-item-selected: #374151; /* gray-700 */
-  
-  --editor-bg: #ffffff;
-  --editor-text: #111827;
-  --editor-text-muted: #9ca3af;
-  --editor-toolbar-bg: #f9fafb; /* gray-50 */
-  
-  --chat-bg: #f3f4f6;
-  --chat-user-bg: #374151;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #e5e7eb;
-  --chat-agent-text: #111827;
-  
-  --btn-primary-bg: #374151;
-  --btn-primary-hover: #1f2937;
-  --btn-secondary-bg: #e5e7eb;
-  --btn-secondary-hover: #d1d5db;
-  
-  --border-main: #e5e7eb;
-  --border-input: #d1d5db;
-}
-
-
-/* Starry Night theme */
-[data-theme="starry"] {
-  --sidebar-bg: #173679; /* deep blue */
-  --sidebar-border: #0B1E38; /* darker blue */
-  --sidebar-text: #ffcb05; /* muted gold */
-  --sidebar-text-muted: #7FC5DC; /* light blue */
-  --sidebar-item-bg: #4888C8; /* medium blue */
-  --sidebar-item-hover: #5FA0E0; /* lighter blue */
-  --sidebar-item-selected: #ffcb05; /* orange accent */
-  
-  --editor-bg: #FFFEF5; /* cream */
-  --editor-text: #173679; /* deep blue */
-  --editor-text-muted: #4888C8; /* medium blue */
-  --editor-toolbar-bg: #FFF9E6; /* light cream */
-  --editor-toolbar-text: #173679; /* deep blue */
-  
-  --chat-bg: #173679;
-  --chat-user-bg: #ffcb05;
-  --chat-user-text: #173679;
-  --chat-agent-bg: #4888C8;
-  --chat-agent-text: #ffffff;
-  
-  --btn-primary-bg: #ffcb05;
-  --btn-primary-hover: #C19A2E;
-  --btn-secondary-bg: #4888C8;
-  --btn-secondary-hover: #5FA0E0;
-  
-  --border-main: #0B1E38;
-  --border-input: #5FA0E0;
-}
-
-/* Lilac theme */
-[data-theme="lilac"] {
-  --sidebar-bg: #D4CFEA; /* cool lavender */
-  --sidebar-border: #B5A9D6; /* cool lilac */
-  --sidebar-text: #3A2F52; /* deep cool purple */
-  --sidebar-text-muted: #6B5B8C; /* cool purple-gray */
-  --sidebar-item-bg: #C4B9E0; /* medium cool lilac */
-  --sidebar-item-hover: #B5A9D6; /* hover lilac */
-  --sidebar-item-selected: #8B76C1; /* cool purple accent */
-  
-  --editor-bg: #F8F7FD; /* very light cool lavender */
-  --editor-text: #3A2F52; /* deep cool purple */
-  --editor-text-muted: #8B76C1; /* cool purple */
-  --editor-toolbar-bg: #EFEDF7; /* light cool lavender */
-  --editor-toolbar-text: #3A2F52; /* deep cool purple */
-  
-  --chat-bg: #D4CFEA;
-  --chat-user-bg: #8B76C1;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #C4B9E0;
-  --chat-agent-text: #3A2F52;
-  
-  --btn-primary-bg: #8B76C1;
-  --btn-primary-hover: #7562A8;
-  --btn-secondary-bg: #C4B9E0;
-  --btn-secondary-hover: #B5A9D6;
-  
-  --border-main: #B5A9D6;
-  --border-input: #C4B9E0;
-}
-
 
 /* Ocean theme - Cool, calming blue tones */
 [data-theme="ocean"] {
@@ -327,160 +201,6 @@
   --border-input: #2f3a5a;
 }
 
-/* Sage theme - Soft, natural greens */
-[data-theme="sage"] {
-  --sidebar-bg: #c8d5b9; /* soft sage green */
-  --sidebar-border: #a8b89a; /* medium sage */
-  --sidebar-text: #2f3e2a; /* dark forest green */
-  --sidebar-text-muted: #5a6b52; /* medium forest */
-  --sidebar-item-bg: #b8c9a7; /* darker sage */
-  --sidebar-item-hover: #a8b89a; /* hover sage */
-  --sidebar-item-selected: #6b8556; /* forest accent */
-  
-  --editor-bg: #f8faf5; /* very light sage */
-  --editor-text: #2a3624; /* very dark green */
-  --editor-text-muted: #6b7a62; /* muted green */
-  --editor-toolbar-bg: #eef2e8; /* light sage */
-  --editor-toolbar-text: #2f3e2a; /* dark forest green */
-  
-  --chat-bg: #c8d5b9;
-  --chat-user-bg: #6b8556;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #b8c9a7;
-  --chat-agent-text: #2f3e2a;
-  
-  --btn-primary-bg: #6b8556;
-  --btn-primary-hover: #7a9665;
-  --btn-secondary-bg: #b8c9a7;
-  --btn-secondary-hover: #a8b89a;
-  
-  --border-main: #a8b89a;
-  --border-input: #b8c9a7;
-}
-
-/* Amber theme - Warm, golden tones */
-[data-theme="amber"] {
-  --sidebar-bg: #e8c58a; /* warm amber */
-  --sidebar-border: #d4a76a; /* medium amber */
-  --sidebar-text: #3d2a1a; /* dark brown */
-  --sidebar-text-muted: #6b5240; /* medium brown */
-  --sidebar-item-bg: #ddb878; /* darker amber */
-  --sidebar-item-hover: #d4a76a; /* hover amber */
-  --sidebar-item-selected: #c18c3f; /* gold accent */
-  
-  --editor-bg: #fffbf5; /* cream */
-  --editor-text: #2d1f10; /* very dark brown */
-  --editor-text-muted: #8b6f47; /* muted brown */
-  --editor-toolbar-bg: #faf3e8; /* light cream */
-  --editor-toolbar-text: #3d2a1a; /* dark brown */
-  
-  --chat-bg: #e8c58a;
-  --chat-user-bg: #c18c3f;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #ddb878;
-  --chat-agent-text: #3d2a1a;
-  
-  --btn-primary-bg: #c18c3f;
-  --btn-primary-hover: #d4a354;
-  --btn-secondary-bg: #ddb878;
-  --btn-secondary-hover: #d4a76a;
-  
-  --border-main: #d4a76a;
-  --border-input: #ddb878;
-}
-
-/* Cherry Blossom theme - Soft pink and white */
-[data-theme="cherry"] {
-  --sidebar-bg: #f5d4e0; /* soft pink */
-  --sidebar-border: #e5b8cc; /* medium pink */
-  --sidebar-text: #4a2533; /* deep rose-brown */
-  --sidebar-text-muted: #7a4d5f; /* medium rose */
-  --sidebar-item-bg: #edc4d4; /* darker pink */
-  --sidebar-item-hover: #e5b8cc; /* hover pink */
-  --sidebar-item-selected: #c97890; /* rose accent */
-  
-  --editor-bg: #fffafc; /* very light pink-white */
-  --editor-text: #3a1f2a; /* very dark rose */
-  --editor-text-muted: #9a6b7f; /* muted rose */
-  --editor-toolbar-bg: #fdf0f5; /* light pink-white */
-  --editor-toolbar-text: #4a2533; /* deep rose-brown */
-  
-  --chat-bg: #f5d4e0;
-  --chat-user-bg: #c97890;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #edc4d4;
-  --chat-agent-text: #4a2533;
-  
-  --btn-primary-bg: #c97890;
-  --btn-primary-hover: #d88fa5;
-  --btn-secondary-bg: #edc4d4;
-  --btn-secondary-hover: #e5b8cc;
-  
-  --border-main: #e5b8cc;
-  --border-input: #edc4d4;
-}
-
-/* Slate theme - Professional gray-blue */
-[data-theme="slate"] {
-  --sidebar-bg: #cbd5e1; /* light slate */
-  --sidebar-border: #94a3b8; /* medium slate */
-  --sidebar-text: #1e293b; /* dark slate */
-  --sidebar-text-muted: #475569; /* medium-dark slate */
-  --sidebar-item-bg: #b8c7db; /* darker slate */
-  --sidebar-item-hover: #94a3b8; /* hover slate */
-  --sidebar-item-selected: #3b82f6; /* blue accent */
-  
-  --editor-bg: #f8fafc; /* very light slate */
-  --editor-text: #0f172a; /* very dark slate */
-  --editor-text-muted: #64748b; /* muted slate */
-  --editor-toolbar-bg: #f1f5f9; /* light slate */
-  --editor-toolbar-text: #1e293b; /* dark slate */
-  
-  --chat-bg: #cbd5e1;
-  --chat-user-bg: #3b82f6;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #b8c7db;
-  --chat-agent-text: #1e293b;
-  
-  --btn-primary-bg: #3b82f6;
-  --btn-primary-hover: #2563eb;
-  --btn-secondary-bg: #b8c7db;
-  --btn-secondary-hover: #94a3b8;
-  
-  --border-main: #94a3b8;
-  --border-input: #b8c7db;
-}
-
-/* Espresso theme - Rich coffee browns */
-[data-theme="espresso"] {
-  --sidebar-bg: #3e2723; /* dark espresso */
-  --sidebar-border: #2c1810; /* darker espresso */
-  --sidebar-text: #efebe9; /* cream */
-  --sidebar-text-muted: #bcaaa4; /* light brown */
-  --sidebar-item-bg: #4e342e; /* medium espresso */
-  --sidebar-item-hover: #5d4037; /* lighter espresso */
-  --sidebar-item-selected: #8d6e63; /* mocha accent */
-  
-  --editor-bg: #f5f0ed; /* cream */
-  --editor-text: #2c1810; /* very dark brown */
-  --editor-text-muted: #6d4c41; /* medium brown */
-  --editor-toolbar-bg: #ebe4e0; /* light cream */
-  --editor-toolbar-text: #3e2723; /* dark espresso */
-  
-  --chat-bg: #3e2723;
-  --chat-user-bg: #8d6e63;
-  --chat-user-text: #ffffff;
-  --chat-agent-bg: #4e342e;
-  --chat-agent-text: #efebe9;
-  
-  --btn-primary-bg: #8d6e63;
-  --btn-primary-hover: #a1887f;
-  --btn-secondary-bg: #4e342e;
-  --btn-secondary-hover: #5d4037;
-  
-  --border-main: #2c1810;
-  --border-input: #5d4037;
-}
 
 @theme inline {
   --color-background: var(--background);
@@ -539,4 +259,8 @@ button, input, textarea, select {
 
 .shadow-lg {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.tab-button {
+  border-radius: 0 !important;
 }

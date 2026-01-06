@@ -1,5 +1,5 @@
 // electron/agent/index.js
-// Main entry point for the agent - replaces your simple agent.js
+// Main entry point for the agent
 
 const { HumanMessage } = require('@langchain/core/messages');
 const { runAgentGraph } = require('./graph');
@@ -14,10 +14,11 @@ const db = require('../database.js');
  * @param {string} params.projectPath - Path to project folder
  * @param {string} params.activeDocumentPath - Path to active document
  * @param {string} [params.threadId] - Thread ID for conversation continuity
+ * @param {Object} [params.liveContent] - Live content from editor {name, content, path}
  * @returns {Promise<Object>} Agent response
  */
 async function runAgent(params) {
-  const { message, userId, projectPath, activeDocumentPath, threadId } = params;
+  const { message, userId, projectPath, activeDocumentPath, threadId, liveContent } = params;
   
   // Generate thread ID if not provided
   const thread = threadId || `thread_${Date.now()}`;
@@ -30,16 +31,18 @@ async function runAgent(params) {
   console.log('Active Document:', activeDocumentPath);
   console.log('Thread:', thread);
   console.log('Message:', message);
+  console.log('Live Content:', liveContent ? 'Yes' : 'No');
   console.log('='.repeat(60) + '\n');
   
   try {
     // Save user message to database
     db.saveMessage(projectPath, thread, 'user', message);
     
-    // Create initial state
+    // Create initial state with live content
     const initialState = {
       ...createInitialState(message, userId, projectPath, activeDocumentPath),
-      messages: [new HumanMessage(message)]
+      messages: [new HumanMessage(message)],
+      liveContent: liveContent // Pass live content to tools
     };
     
     // Run the agent graph
@@ -58,13 +61,20 @@ async function runAgent(params) {
     
     console.log('\n' + '='.repeat(60));
     console.log('✅ AGENT COMPLETED');
-    console.log('='.repeat(60) + '\n');
+    console.log('='.repeat(60));
+    
+    // Check if there's generated text to return separately
+    const generatedText = result.generatedText || null;
+    if (generatedText) {
+      console.log('📝 Generated text included for editor insertion');
+    }
     
     return {
       response: responseContent,
       threadId: thread,
       userIntent: result.userIntent,
       gatheredInfo: result.gatheredInfo,
+      generatedText: generatedText, // NEW: Pass generated text to frontend
       timestamp: new Date()
     };
   } catch (error) {

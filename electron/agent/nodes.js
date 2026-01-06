@@ -5,16 +5,16 @@ const { ChatOllama } = require('@langchain/ollama');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 const { searchContext, analyzeDraft, generateText, askQuestion } = require('./tools');
 
+const MODEL = "llama3.2";
+
 const model = new ChatOllama({
-  model: 'llama3.1',
+  model: MODEL,
   temperature: 0.7,
 });
 
 /**
  * UNDERSTAND NODE
  * Analyzes user's message to determine intent and what they need
- * @param {Object} state - Current agent state
- * @returns {Promise<Object>} Updated state with userIntent
  */
 async function understandNode(state) {
   const lastMessage = state.messages[state.messages.length - 1];
@@ -68,8 +68,6 @@ Format: CATEGORY: explanation`;
 /**
  * EXECUTE NODE
  * Runs appropriate tools based on understood intent
- * @param {Object} state - Current agent state
- * @returns {Promise<Object>} Updated state with gatheredInfo
  */
 async function executeNode(state) {
   const gatheredInfo = { ...state.gatheredInfo };
@@ -87,7 +85,6 @@ async function executeNode(state) {
     if (intent.includes('search') || intent.includes('find')) {
       console.log('🔍 Running searchContext tool...');
       
-      // Extract search terms (remove common words)
       const searchTerms = messageContent
         .toLowerCase()
         .replace(/find|search|look|looking|information|about|out|for|what|is|tell|me|the|a|an|where|when|who/gi, ' ')
@@ -99,7 +96,8 @@ async function executeNode(state) {
       
       const searchResults = await searchContext(
         searchQuery,
-        state.projectPath
+        state.projectPath,
+        state.liveContent
       );
       
       gatheredInfo.searchResults = searchResults;
@@ -107,12 +105,13 @@ async function executeNode(state) {
     
     // ANALYZE - Provide feedback on writing
     if (intent.includes('analyze') || intent.includes('feedback') || intent.includes('review')) {
-      console.log('📝 Running analyzeDraft tool...');
+      console.log('📊 Running analyzeDraft tool...');
       
       if (state.activeDocumentPath) {
         const analysis = await analyzeDraft(
           state.activeDocumentPath,
-          state.projectPath
+          state.projectPath,
+          state.liveContent
         );
         gatheredInfo.analysis = analysis;
       } else {
@@ -125,12 +124,13 @@ async function executeNode(state) {
     
     // GENERATE - Create new content
     if (intent.includes('generate') || intent.includes('write') || intent.includes('continue') || intent.includes('help me write')) {
-      console.log('✍️ Running generateText tool...');
+      console.log('✏️ Running generateText tool...');
       
       const generated = await generateText(
         messageContent,
         state.projectPath,
-        state.activeDocumentPath
+        state.activeDocumentPath,
+        state.liveContent
       );
       gatheredInfo.generated = generated;
     }
@@ -170,8 +170,6 @@ async function executeNode(state) {
 /**
  * RESPOND NODE
  * Synthesizes gathered information into a helpful response
- * @param {Object} state - Current agent state
- * @returns {Promise<Object>} Updated state with AI response message
  */
 async function respondNode(state) {
   const userMessage = state.messages[state.messages.length - 1];
@@ -179,7 +177,22 @@ async function respondNode(state) {
     ? userMessage.content
     : String(userMessage.content);
   
-  // Build context from gathered information
+  // Check if we have generated text - if so, return it directly with minimal wrapper
+  if (state.gatheredInfo.generated && state.gatheredInfo.generated.success) {
+    const gen = state.gatheredInfo.generated;
+    
+    console.log('✅ Returning generated text for editor insertion');
+    
+    // Return a brief explanation + the generated text
+    const response = `I'll continue your story from where you left off. Here's what I've written:`;
+    
+    return {
+      messages: [new AIMessage(response)],
+      generatedText: gen.generated // This will be sent separately to the editor
+    };
+  }
+  
+  // Build context from gathered information for other responses
   let contextSummary = '';
   
   if (state.gatheredInfo.searchResults) {
@@ -206,16 +219,6 @@ async function respondNode(state) {
       contextSummary += `\n${analysis.analysis}`;
     } else {
       contextSummary += `\n\nCould not analyze document: ${analysis.message}`;
-    }
-  }
-  
-  if (state.gatheredInfo.generated) {
-    const gen = state.gatheredInfo.generated;
-    if (gen.success) {
-      contextSummary += '\n\nGenerated Content:\n';
-      contextSummary += gen.generated;
-    } else {
-      contextSummary += `\n\nCould not generate content: ${gen.message}`;
     }
   }
   
@@ -247,7 +250,6 @@ Provide a helpful, conversational response that:
 4. Stays encouraging and supportive
 5. Keeps it concise but thorough
 
-If you're responding with generated content, present it naturally.
 If providing feedback, be specific and constructive.
 If no relevant info was found, be honest but helpful.`;
 

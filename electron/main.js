@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const mammoth = require('mammoth');
-const { runAgent } = require('./agent/index.js'); // NEW: Multi-node agent
+const { runAgent } = require('./agent/index.js');
 const db = require('./database.js');
 
 let mainWindow;
@@ -18,8 +18,6 @@ function createWindow() {
     },
   });
 
-  // In development, load from Vite dev server
-  // In production, load the built files
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
@@ -29,10 +27,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  // Initialize database on startup
   db.getDatabase();
   console.log('Database initialized');
-  
   createWindow();
 });
 
@@ -48,9 +44,22 @@ app.on('activate', () => {
   }
 });
 
+// Helper function to convert plain text to HTML
+function textToHtml(text) {
+  if (!text) return '';
+  
+  // Split by newlines and wrap each paragraph in <p> tags
+  const paragraphs = text.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => `<p>${line}</p>`)
+    .join('');
+  
+  return paragraphs || '<p><br></p>';
+}
+
 // IPC Handlers
 
-// Select a project folder
 ipcMain.handle('select-project-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory', 'createDirectory'],
@@ -64,14 +73,12 @@ ipcMain.handle('select-project-folder', async () => {
   return result.filePaths[0];
 });
 
-// List all markdown files in a folder
 ipcMain.handle('load-documents', async (event, folderPath) => {
   try {
     console.log('Loading documents from:', folderPath);
     const files = await fs.readdir(folderPath);
     console.log('All files:', files);
     
-    // Support multiple file types: .md, .txt, .docx, .doc
     const supportedFiles = files.filter(file => {
       const ext = file.toLowerCase();
       return ext.endsWith('.md') || ext.endsWith('.txt') || ext.endsWith('.docx') || ext.endsWith('.doc');
@@ -87,15 +94,30 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
           const lowerFilename = filename.toLowerCase();
           
           if (lowerFilename.endsWith('.md') || lowerFilename.endsWith('.txt')) {
-            // Plain text files - read directly
-            content = await fs.readFile(filePath, 'utf-8');
+            const textContent = await fs.readFile(filePath, 'utf-8');
+            content = textToHtml(textContent);
           } else if (lowerFilename.endsWith('.docx')) {
-            // Word .docx files - use mammoth to extract text
-            const result = await mammoth.extractRawText({ path: filePath });
-            content = result.value;
+            try {
+              // Use mammoth to convert to HTML instead of plain text
+              const result = await mammoth.convertToHtml({ path: filePath });
+              content = result.value;
+              
+              // Log any warnings from mammoth
+              if (result.messages.length > 0) {
+                console.log(`Mammoth warnings for ${filename}:`, result.messages);
+              }
+            } catch (docxError) {
+              console.error(`Error parsing .docx file ${filename}:`, docxError.message);
+              // If .docx parsing fails, try reading as plain text
+              try {
+                const textContent = await fs.readFile(filePath, 'utf-8');
+                content = textToHtml(`⚠️ Warning: This .docx file appears to be corrupted or invalid.\n\nAttempting to display raw content:\n\n${textContent}`);
+              } catch (textError) {
+                content = textToHtml(`❌ Error: Could not read ${filename}\n\nThis file appears to be corrupted or not a valid .docx file.\n\nPlease try:\n1. Opening it in Microsoft Word and re-saving it\n2. Converting it to .txt format\n3. Creating a new document and copying the content`);
+              }
+            }
           } else if (lowerFilename.endsWith('.doc')) {
-            // Old Word .doc files - just show a message (mammoth doesn't support .doc)
-            content = `# ${filename}\n\nOld .doc format is not supported. Please convert to .docx or .txt format.\n\nYou can edit this file here and it will be saved as plain text.`;
+            content = textToHtml(`# ${filename}\n\nOld .doc format is not supported. Please convert to .docx or .txt format.\n\nYou can edit this file here and it will be saved as plain text.`);
           }
           
           const stats = await fs.stat(filePath);
@@ -113,10 +135,8 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
       })
     );
     
-    // Filter out any failed reads
     const validDocuments = documents.filter(doc => doc !== null);
-    
-    console.log('Loaded documents:', validDocuments);
+    console.log('Loaded documents:', validDocuments.length);
     return validDocuments;
   } catch (error) {
     console.error('Error loading documents:', error);
@@ -124,10 +144,22 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
   }
 });
 
-// Save a document
 ipcMain.handle('save-document', async (event, filePath, content) => {
   try {
-    await fs.writeFile(filePath, content, 'utf-8');
+    // Convert HTML back to plain text for saving
+    // This strips all HTML tags
+    const plainText = content
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .trim();
+    
+    await fs.writeFile(filePath, plainText, 'utf-8');
     return { success: true };
   } catch (error) {
     console.error('Error saving document:', error);
@@ -135,10 +167,8 @@ ipcMain.handle('save-document', async (event, filePath, content) => {
   }
 });
 
-// Create a new document
 ipcMain.handle('create-document', async (event, folderPath, filename) => {
   try {
-    // Add .txt extension if no extension provided
     if (!filename.includes('.')) {
       filename += '.txt';
     }
@@ -149,7 +179,7 @@ ipcMain.handle('create-document', async (event, folderPath, filename) => {
     return {
       name: filename,
       path: filePath,
-      content: '',
+      content: '<p><br></p>', // Start with empty HTML paragraph
       modified: new Date(),
     };
   } catch (error) {
@@ -158,26 +188,23 @@ ipcMain.handle('create-document', async (event, folderPath, filename) => {
   }
 });
 
-// Chat with AI using the multi-node agent
+// Chat with AI - autosave ensures file is always current
 ipcMain.handle('chat', async (event, message, context) => {
   try {
     console.log('Chat message:', message);
-    console.log('Context:', context);
     
-    // Extract context info
     const userId = context.userId || 'default-user';
-    const projectPath = context.projectPath || context.currentDocument?.path?.split(path.sep).slice(0, -1).join(path.sep) || '';
-    const activeDocumentPath = context.currentDocument?.path || '';
+    const projectPath = context.projectPath || '';
+    const activeDocumentPath = context.currentDocument?.filePath || context.currentDocument?.path || '';
     const threadId = context.threadId || null;
     
-    console.log('Prepared context:', {
+    console.log('Agent context:', {
       userId,
       projectPath,
       activeDocumentPath,
       threadId
     });
     
-    // Run the multi-node agent
     const result = await runAgent({
       message,
       userId,
@@ -204,7 +231,6 @@ ipcMain.handle('chat', async (event, message, context) => {
   }
 });
 
-// Get recent projects
 ipcMain.handle('get-recent-projects', async () => {
   try {
     return db.getRecentProjects(10);
@@ -214,7 +240,6 @@ ipcMain.handle('get-recent-projects', async () => {
   }
 });
 
-// Add/update recent project
 ipcMain.handle('add-recent-project', async (event, projectId, name, projectPath) => {
   try {
     db.addRecentProject(projectId, name, projectPath);
@@ -226,7 +251,6 @@ ipcMain.handle('add-recent-project', async (event, projectId, name, projectPath)
   }
 });
 
-// Get conversation history
 ipcMain.handle('get-conversation-history', async (event, threadId) => {
   try {
     return db.getConversationHistory(threadId, 50);
@@ -236,7 +260,6 @@ ipcMain.handle('get-conversation-history', async (event, threadId) => {
   }
 });
 
-// Get project conversations
 ipcMain.handle('get-project-conversations', async (event, projectPath) => {
   try {
     return db.getProjectConversations(projectPath);
@@ -246,7 +269,6 @@ ipcMain.handle('get-project-conversations', async (event, projectPath) => {
   }
 });
 
-// Preferences
 ipcMain.handle('get-preference', async (event, key, defaultValue) => {
   try {
     return db.getPreference(key, defaultValue);

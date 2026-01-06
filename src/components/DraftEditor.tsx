@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
+import { useEditorCommands } from './useEditorCommands';
+import RichEditor, { RichEditorHandle } from './RichTextEditor';
 
 interface Tab {
   id: string;
@@ -38,6 +40,7 @@ export default function DraftEditor({
   const [renameValue, setRenameValue] = useState('');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const [hasSelection, setHasSelection] = useState(false);
   
   // Formatting states
   const [fontFamily, setFontFamily] = useState<FontFamily>('crimson');
@@ -59,13 +62,25 @@ export default function DraftEditor({
     { value: 2.0, label: 'Loose' },
   ];
 
+  const editorRef = useRef<RichEditorHandle>(null);
+  const commands = useEditorCommands(editorRef);
+
+  // Check selection state when format menu opens
   useEffect(() => {
-    if (activeTab) {
-      const words = activeTab.content.trim().split(/\s+/).filter(w => w.length > 0).length;
-      setWordCount(words);
-      setCharCount(activeTab.content.length);
+    if (showFormatMenu) {
+      setHasSelection(commands.hasSelection());
     }
-  }, [activeTab]);
+  }, [showFormatMenu]);
+
+  // Update word and character count when content changes
+  useEffect(() => {
+    if (activeTab && editorRef.current) {
+      const text = editorRef.current.getText();
+      const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+      setWordCount(words);
+      setCharCount(text.length);
+    }
+  }, [activeTab?.content]);
 
   const handleContentChange = (content: string) => {
     if (activeTab) {
@@ -74,9 +89,10 @@ export default function DraftEditor({
   };
 
   const handleExport = () => {
-    if (!activeTab) return;
+    if (!activeTab || !editorRef.current) return;
     
-    const blob = new Blob([activeTab.content], { type: 'text/plain' });
+    const text = editorRef.current.getText();
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -91,13 +107,14 @@ export default function DraftEditor({
   };
 
   const handleExportDocx = async () => {
-    if (!activeTab) return;
+    if (!activeTab || !editorRef.current) return;
     
     try {
+      const text = editorRef.current.getText();
       const doc = new Document({
         sections: [{
           properties: {},
-          children: activeTab.content.split('\n').map(line => 
+          children: text.split('\n').map(line => 
             new Paragraph({
               children: [new TextRun(line || ' ')],
             })
@@ -122,9 +139,10 @@ export default function DraftEditor({
   };
 
   const handleExportPdf = async () => {
-    if (!activeTab) return;
+    if (!activeTab || !editorRef.current) return;
     
     try {
+      const text = editorRef.current.getText();
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -133,7 +151,7 @@ export default function DraftEditor({
       const lineHeight = 7;
       let yPosition = margin;
       
-      const lines = doc.splitTextToSize(activeTab.content, maxWidth);
+      const lines = doc.splitTextToSize(text, maxWidth);
       
       for (let i = 0; i < lines.length; i++) {
         if (yPosition + lineHeight > pageHeight - margin) {
@@ -347,14 +365,18 @@ export default function DraftEditor({
                     className="block text-xs font-medium mb-2"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
-                    Font Family
+                    Font Family {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}
                   </label>
                   <div className="space-y-1">
                     {fontFamilies.map((font) => (
                       <button
                         key={font.id}
                         onClick={() => {
-                          setFontFamily(font.id);
+                          if (hasSelection) {
+                            commands.setFontFamily(font.style);
+                          } else {
+                            setFontFamily(font.id);
+                          }
                         }}
                         className="w-full px-3 py-2 text-left text-sm transition-colors"
                         style={{
@@ -379,6 +401,93 @@ export default function DraftEditor({
                     ))}
                   </div>
                 </div>
+                
+                {/* Format Text Buttons */}
+                <div className="mb-4">
+                  <label 
+                    className="block text-xs font-medium mb-2"
+                    style={{ color: 'var(--sidebar-text)' }}
+                  >
+                    Text Formatting
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      type="button" 
+                      onClick={commands.bold}
+                      className="px-3 py-2 text-sm font-bold border rounded transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
+                      title="Bold"
+                    >
+                      B
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={commands.italic}
+                      className="px-3 py-2 text-sm italic border rounded transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
+                      title="Italic"
+                    >
+                      I
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={commands.underline}
+                      className="px-3 py-2 text-sm underline border rounded transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
+                      title="Underline"
+                    >
+                      U
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={commands.strike}
+                      className="px-3 py-2 text-sm line-through border rounded transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
+                      title="Strikethrough"
+                    >
+                      S
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => commands.highlight('#fff3a0')}
+                      className="px-3 py-2 text-sm border rounded transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
+                      title="Highlight"
+                    >
+                      🖍
+                    </button>
+                  </div>
+                </div>
 
                 {/* Font Size */}
                 <div className="mb-4">
@@ -386,7 +495,7 @@ export default function DraftEditor({
                     className="block text-xs font-medium mb-2 flex items-center justify-between"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
-                    <span>Font Size</span>
+                    <span>Font Size {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}</span>
                     <span className="font-bold">{fontSize}px</span>
                   </label>
                   <input
@@ -395,7 +504,13 @@ export default function DraftEditor({
                     max="32"
                     step="1"
                     value={fontSize}
-                    onChange={(e) => setFontSize(parseInt(e.target.value) as FontSize)}
+                    onChange={(e) => {
+                      const newSize = parseInt(e.target.value) as FontSize;
+                      setFontSize(newSize);
+                      if (hasSelection) {
+                        commands.setFontSize(newSize);
+                      }
+                    }}
                     className="w-full h-2 rounded-lg appearance-none cursor-pointer"
                     style={{
                       background: `linear-gradient(to right, var(--btn-primary-bg) 0%, var(--btn-primary-bg) ${((fontSize - 12) / 20) * 100}%, var(--sidebar-item-bg) ${((fontSize - 12) / 20) * 100}%, var(--sidebar-item-bg) 100%)`
@@ -413,13 +528,19 @@ export default function DraftEditor({
                     className="block text-xs font-medium mb-2"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
-                    Line Spacing
+                    Line Spacing {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}
                   </label>
                   <div className="space-y-1">
                     {lineHeights.map((lh) => (
                       <button
                         key={lh.value}
-                        onClick={() => setLineHeight(lh.value)}
+                        onClick={() => {
+                          if (hasSelection) {
+                            commands.setLineHeight(lh.value);
+                          } else {
+                            setLineHeight(lh.value);
+                          }
+                        }}
                         className="w-full px-3 py-2 text-left text-sm transition-colors"
                         style={{
                           background: lineHeight === lh.value ? 'var(--sidebar-item-selected)' : 'transparent',
@@ -481,94 +602,51 @@ export default function DraftEditor({
                 <button
                   onClick={handleExport}
                   className="w-full px-4 py-2 text-left text-sm transition-colors"
-                  style={{
-                    color: 'var(--sidebar-text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   📄 Text (.txt)
                 </button>
                 <button
                   onClick={handleExportDocx}
                   className="w-full px-4 py-2 text-left text-sm transition-colors"
-                  style={{
-                    color: 'var(--sidebar-text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   📘 Word (.docx)
                 </button>
                 <button
                   onClick={handleExportPdf}
                   className="w-full px-4 py-2 text-left text-sm transition-colors"
-                  style={{
-                    color: 'var(--sidebar-text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--sidebar-item-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
+                  style={{ color: 'var(--sidebar-text)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   📕 PDF (.pdf)
                 </button>
               </div>
             )}
           </div>
-          
-          {/* <button 
-            onClick={() => activeTab && onContentChange(activeTab.id, '')}
-            className="px-4 py-2 text-sm border font-medium transition-all shadow-sm"
-            style={{
-              background: 'var(--btn-secondary-bg)',
-              borderColor: 'var(--border-input)',
-              color: 'var(--editor-toolbar-text, var(--sidebar-text))',
-              borderRadius: 'var(--radius-md)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            Clear
-          </button> */}
         </div>
       </div>
 
       {/* Editor */}
-      <div className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {activeTab ? (
-          <textarea
-            value={activeTab.content}
-            onChange={(e) => handleContentChange(e.target.value)}
-            placeholder="Start writing your story here...
-
-Select any text and ask your AI companion for help."
-            className="w-full h-full resize-none border-none outline-none"
-            style={{ 
-              minHeight: '100%',
-              background: 'var(--editor-bg)',
-              color: 'var(--editor-text)',
-              fontFamily: currentFontFamily?.style,
-              fontSize: `${fontSize}px`,
-              lineHeight: lineHeight.toString()
-            }}
-          />
+          <div className="h-full px-8 py-8 overflow-y-auto">
+            <RichEditor
+              ref={editorRef}
+              value={activeTab.content}
+              onChange={handleContentChange}
+              fontFamily={currentFontFamily?.style || fontFamilies[0].style}
+              fontSize={fontSize}
+              lineHeight={lineHeight}
+              placeholder="Start writing your story here…"
+              className="w-full"
+            />
+          </div>
         ) : (
           <div 
             className="flex items-center justify-center h-full"

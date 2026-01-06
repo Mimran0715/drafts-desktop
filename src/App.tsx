@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from './components/ThemeContext';
 import PageLayout from './components/PageLayout';
 import FilesSidebar from './components/FilesSidebar';
 import DraftEditor from './components/DraftEditor';
 import AgentChat from './components/AgentChat';
 import InputModal from './components/InputModal';
+import type { RichEditorHandle } from './components/RichTextEditor';
 import './globals.css';
 
-// Extend Window interface
 declare global {
   interface Window {
     electronAPI: {
@@ -16,7 +16,6 @@ declare global {
       saveDocument: (filePath: string, content: string) => Promise<any>;
       createDocument: (folderPath: string, filename: string) => Promise<any>;
       chat: (message: string, context: any) => Promise<any>;
-      // Database APIs
       getRecentProjects: () => Promise<any[]>;
       addRecentProject: (projectId: string, name: string, projectPath: string) => Promise<any>;
       getConversationHistory: (threadId: string) => Promise<any[]>;
@@ -46,24 +45,24 @@ interface Message {
   role: 'user' | 'agent';
   content: string;
   timestamp: Date;
+  hasGeneratedText?: boolean;
 }
 
 function AppContent() {
-  // Project state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-
-  // Tabs/Editor
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>('');
-
-  // Chat
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Modal state
   const [showFileModal, setShowFileModal] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
+  
+  // Autosave refs
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSavingRef = useRef(false);
+  const editorRef = useRef<RichEditorHandle>(null);
 
-  // Load documents when project changes
   useEffect(() => {
     if (currentProject) {
       loadProjectDocuments();
@@ -100,7 +99,6 @@ function AppContent() {
     }
   };
 
-  // Project handlers
   const handleCreateProject = async () => {
     console.log('Create project clicked');
     
@@ -116,7 +114,7 @@ function AppContent() {
 
       const folderName = path.split('/').pop() || path.split('\\').pop() || 'Untitled';
     
-          const newProject: Project = {
+      const newProject: Project = {
         id: Date.now().toString(),
         name: folderName,
         path: path
@@ -124,13 +122,13 @@ function AppContent() {
 
       setCurrentProject(newProject);
       
-      // Create a welcome document
       try {
         const welcomeDoc = await window.electronAPI.createDocument(path, 'Welcome.md');
+        const welcomeContent = '<p>Welcome to your new writing project!</p><p>Start writing here...</p>';
         const welcomeTab: Tab = {
           id: welcomeDoc.path,
           title: welcomeDoc.name,
-          content: 'Welcome to your new writing project!\n\nStart writing here...',
+          content: welcomeContent,
           filePath: welcomeDoc.path,
           isDirty: true
         };
@@ -138,8 +136,7 @@ function AppContent() {
         setTabs([welcomeTab]);
         setActiveTabId(welcomeTab.id);
         
-        // Auto-save the welcome content
-        await window.electronAPI.saveDocument(welcomeDoc.path, welcomeTab.content);
+        await window.electronAPI.saveDocument(welcomeDoc.path, welcomeContent);
       } catch (error) {
         console.error('Error creating welcome document:', error);
       }
@@ -162,7 +159,7 @@ function AppContent() {
       console.log('Selected path:', path);
       if (!path) return;
 
-          const folderName = path.split('/').pop() || path.split('\\').pop() || 'Untitled';
+      const folderName = path.split('/').pop() || path.split('\\').pop() || 'Untitled';
       
       const newProject: Project = {
         id: Date.now().toString(),
@@ -181,9 +178,7 @@ function AppContent() {
     console.log('Selected recent project:', project);
     
     try {
-      // Update last opened time
       await window.electronAPI.addRecentProject(project.id, project.name, project.path);
-      
       setCurrentProject(project);
     } catch (error) {
       console.error('Error selecting recent project:', error);
@@ -191,7 +186,6 @@ function AppContent() {
     }
   };
 
-  // Tab handlers
   const handleNewTab = async () => {
     console.log('New tab clicked');
     
@@ -205,7 +199,6 @@ function AppContent() {
       return;
     }
 
-    // Show modal instead of prompt
     setShowFileModal(true);
   };
 
@@ -222,7 +215,7 @@ function AppContent() {
       const newTab: Tab = {
         id: newDoc.path,
         title: newDoc.name,
-        content: '',
+        content: '<p><br></p>',
         filePath: newDoc.path,
         isDirty: false
       };
@@ -251,7 +244,28 @@ function AppContent() {
     }
   };
 
-  const handleContentChange = async (tabId: string, content: string) => {
+  // Autosave function
+  const autosave = async (tabId: string, content: string, filePath: string) => {
+    if (isSavingRef.current) return;
+    
+    try {
+      isSavingRef.current = true;
+      await window.electronAPI.saveDocument(filePath, content);
+      
+      // Mark as saved
+      setTabs(prevTabs => prevTabs.map(t => 
+        t.id === tabId ? { ...t, isDirty: false } : t
+      ));
+      
+      console.log('✅ Autosaved:', filePath.split('/').pop());
+    } catch (error) {
+      console.error('❌ Autosave failed:', error);
+    } finally {
+      isSavingRef.current = false;
+    }
+  };
+
+  const handleContentChange = (tabId: string, content: string) => {
     // Update state immediately for responsive typing
     const updatedTabs = tabs.map(tab => 
       tab.id === tabId 
@@ -259,29 +273,42 @@ function AppContent() {
         : tab
     );
     setTabs(updatedTabs);
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Find the tab to save
+    const tab = updatedTabs.find(t => t.id === tabId);
+    if (!tab?.filePath) return;
+
+    // Debounced autosave - save 1 second after user stops typing
+    saveTimeoutRef.current = setTimeout(() => {
+      autosave(tabId, content, tab.filePath!);
+    }, 1000);
   };
 
-  // Separate auto-save effect with debouncing
+  // Cleanup timeout on unmount
   useEffect(() => {
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (!tab?.isDirty || !tab.filePath) return;
-
-    // Debounce: save after 1 second of no typing
-    const timeoutId = setTimeout(async () => {
-      try {
-        await window.electronAPI.saveDocument(tab.filePath!, tab.content);
-        // Mark as saved
-        setTabs(prevTabs => prevTabs.map(t => 
-          t.id === tab.id ? { ...t, isDirty: false } : t
-        ));
-        console.log('Auto-saved:', tab.title);
-      } catch (error) {
-        console.error('Error auto-saving:', error);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
-    }, 1000);
+    };
+  }, []);
 
-    return () => clearTimeout(timeoutId);
-  }, [tabs, activeTabId]);
+  // Save immediately when switching tabs
+  useEffect(() => {
+    const previousTab = tabs.find(t => t.isDirty);
+    if (previousTab?.filePath && previousTab.id !== activeTabId) {
+      // Clear timeout and save immediately
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      autosave(previousTab.id, previousTab.content, previousTab.filePath);
+    }
+  }, [activeTabId]);
 
   const handleTabRename = (tabId: string, newTitle: string) => {
     setTabs(tabs.map(tab => 
@@ -289,7 +316,6 @@ function AppContent() {
     ));
   };
 
-  // Chat handlers
   const handleChatSend = async (message: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -302,24 +328,53 @@ function AppContent() {
     setIsLoading(true);
 
     try {
-      // Prepare context for AI
+      // Get active document
+      const activeTab = tabs.find(t => t.id === activeTabId);
+      
+      // Get live content from editor (most up-to-date)
+      const liveContent = activeTab && editorRef.current ? {
+        name: activeTab.title,
+        content: editorRef.current.getText(), // Get plain text for agent
+        path: activeTab.filePath || activeTab.id
+      } : null;
+
+      // Prepare context
       const context = {
-        currentDocument: tabs.find(t => t.id === activeTabId),
-        allDocuments: tabs,
-        projectPath: currentProject?.path
+        currentDocument: activeTab ? {
+          title: activeTab.title,
+          filePath: activeTab.filePath,
+          path: activeTab.filePath
+        } : null,
+        projectPath: currentProject?.path,
+        threadId: threadId,
+        liveContent: liveContent // Pass live editor content
       };
 
-      // Call AI (placeholder for now)
+      console.log('Sending to agent:', context);
+
       const response = await window.electronAPI.chat(message, context);
+      
+      // Store thread ID for conversation continuity
+      if (response.threadId) {
+        setThreadId(response.threadId);
+      }
       
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'agent',
-        content: response.response || "I'm here to help with your writing! (AI integration coming soon)",
-        timestamp: new Date()
+        content: response.response || "I'm here to help with your writing!",
+        timestamp: new Date(),
+        hasGeneratedText: !!response.generatedText
       };
 
       setMessages(msgs => [...msgs, agentMessage]);
+
+      // If there's generated text, show it as a suggestion
+      if (response.generatedText) {
+        console.log('📝 Received generated text from agent');
+        setPendingSuggestion(response.generatedText);
+      }
+
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
@@ -332,6 +387,36 @@ function AppContent() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAcceptSuggestion = () => {
+    if (!pendingSuggestion || !activeTabId) return;
+
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) return;
+
+    console.log('✅ Accepting suggestion');
+
+    // Convert plain text suggestion to HTML paragraphs
+    const htmlSuggestion = pendingSuggestion
+      .split('\n\n')
+      .filter(p => p.trim())
+      .map(p => `<p>${p.trim()}</p>`)
+      .join('');
+
+    // Append to current content
+    const newContent = activeTab.content + htmlSuggestion;
+
+    // Update tab content
+    handleContentChange(activeTab.id, newContent);
+
+    // Clear suggestion
+    setPendingSuggestion(null);
+  };
+
+  const handleRejectSuggestion = () => {
+    console.log('❌ Rejecting suggestion');
+    setPendingSuggestion(null);
   };
 
   return (
@@ -358,6 +443,10 @@ function AppContent() {
             onContentChange={handleContentChange}
             onTabRename={handleTabRename}
             onNewTab={handleNewTab}
+            pendingSuggestion={pendingSuggestion}
+            onAcceptSuggestion={handleAcceptSuggestion}
+            onRejectSuggestion={handleRejectSuggestion}
+            ref={editorRef}
           />
         }
         agentChat={

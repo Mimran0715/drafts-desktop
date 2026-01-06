@@ -77,7 +77,7 @@ export default function FilesSidebar({
       >
         <button
           onClick={() => setView('projects')}
-          className="flex-1 py-3 px-4 text-sm font-medium transition-colors relative"
+          className="flex-1 py-3 px-4 text-sm font-medium transition-colors relative tab-button"
           style={{
             color: view === 'projects' ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)'
           }}
@@ -102,7 +102,7 @@ export default function FilesSidebar({
         </button>
         <button
           onClick={() => setView('files')}
-          className="flex-1 py-3 px-4 text-sm font-medium transition-colors relative"
+          className="flex-1 py-3 px-4 text-sm font-medium transition-colors relative tab-button"
           style={{
             color: view === 'files' ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)'
           }}
