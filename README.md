@@ -1,13 +1,18 @@
 # ✏️ Drafts
 
-A beautiful desktop writing app with an AI companion to help you write better.
+A desktop writing app with an AI companion to help you write better.
+
+
+
+https://github.com/user-attachments/assets/d17c5b21-202e-4736-b883-71a7adc05b97
+
 
 ## Features
 
 - **Clean Writing Interface** - Distraction-free editor with customizable fonts and spacing
 - **AI Writing Companion** - Get suggestions, brainstorm ideas, and improve your writing
 - **Project Management** - Organize your work into projects with multiple files
-- **Beautiful Themes** - 7 carefully crafted themes (Letter, Dark, Rose, Forest, Stars, Lavender, Mono)
+- **Themes** - Various themes (Letter, Dark, Rose, Forest, Stars, Lavender, Mono, and more)
 - **Export Options** - Save as TXT, DOCX, or PDF
 
 ## Getting Started
