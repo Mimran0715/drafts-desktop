@@ -3,6 +3,7 @@
 
 const { understandNode, executeNode, respondNode } = require('./nodes');
 const { saveCheckpoint, getLatestCheckpoint } = require('./checkpointer');
+const { traceable } = require('langsmith/traceable');
 
 /**
  * Run the agent graph: understand → execute → respond
@@ -10,7 +11,7 @@ const { saveCheckpoint, getLatestCheckpoint } = require('./checkpointer');
  * @param {Object} config - Configuration including threadId
  * @returns {Promise<Object>} Final agent state
  */
-async function runAgentGraph(initialState, config = {}) {
+const runAgentGraph = traceable(async function runAgentGraph(initialState, config = {}) {
   const { threadId } = config;
   
   console.log('\n🚀 Starting agent graph...');
@@ -71,7 +72,10 @@ async function runAgentGraph(initialState, config = {}) {
     console.error('❌ Error in agent graph:', error);
     throw error;
   }
-}
+}, {
+  name: 'agent_graph',
+  run_type: 'chain',
+});
 
 /**
  * Get or create agent graph (for compatibility with LangGraph API)

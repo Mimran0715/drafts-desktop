@@ -4,8 +4,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { ChatOllama } = require('@langchain/ollama');
+const { traceable } = require('langsmith/traceable');
 
-const MODEL = "llama3.2";
+const MODEL = "llama3.1";
 
 const model = new ChatOllama({
   model: MODEL,
@@ -17,7 +18,7 @@ const model = new ChatOllama({
  * @param {string} projectPath - Path to project folder
  * @returns {Promise<Array>} Array of documents with content
  */
-async function loadProjectDocuments(projectPath) {
+const loadProjectDocuments = traceable(async function loadProjectDocuments(projectPath) {
   try {
     const files = await fs.readdir(projectPath);
     const supportedFiles = files.filter(file => {
@@ -45,14 +46,17 @@ async function loadProjectDocuments(projectPath) {
     console.error('Error loading project documents:', error);
     return [];
   }
-}
+}, {
+  name: 'load_project_documents',
+  run_type: 'tool',
+});
 
 /**
  * Load a specific document by path
  * @param {string} documentPath - Path to document
  * @returns {Promise<Object|null>} Document object or null
  */
-async function loadDocument(documentPath) {
+const loadDocument = traceable(async function loadDocument(documentPath) {
   try {
     const content = await fs.readFile(documentPath, 'utf-8');
     const stats = await fs.stat(documentPath);
@@ -67,7 +71,10 @@ async function loadDocument(documentPath) {
     console.error(`Error loading document ${documentPath}:`, error);
     return null;
   }
-}
+}, {
+  name: 'load_document',
+  run_type: 'tool',
+});
 
 /**
  * Search for relevant content across project documents
@@ -76,7 +83,7 @@ async function loadDocument(documentPath) {
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Search results with relevant excerpts
  */
-async function searchContext(query, projectPath, liveContent = null) {
+const searchContext = traceable(async function searchContext(query, projectPath, liveContent = null) {
   console.log(`🔍 Searching for: "${query}" in project: ${projectPath}`);
   
   const documents = await loadProjectDocuments(projectPath);
@@ -157,7 +164,10 @@ async function searchContext(query, projectPath, liveContent = null) {
     resultCount: results.length,
     results: results.slice(0, 3) // Return top 3 most relevant documents
   };
-}
+}, {
+  name: 'search_context',
+  run_type: 'tool',
+});
 
 /**
  * Analyze the active draft document
@@ -166,7 +176,7 @@ async function searchContext(query, projectPath, liveContent = null) {
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Analysis results
  */
-async function analyzeDraft(documentPath, projectPath, liveContent = null) {
+const analyzeDraft = traceable(async function analyzeDraft(documentPath, projectPath, liveContent = null) {
   console.log(`📝 Analyzing draft: ${documentPath}`);
   
   let document;
@@ -231,7 +241,10 @@ Be specific, constructive, and encouraging.`;
       message: "Error analyzing document: " + error.message
     };
   }
-}
+}, {
+  name: 'analyze_draft',
+  run_type: 'tool',
+});
 
 /**
  * Generate text based on user request
@@ -241,7 +254,7 @@ Be specific, constructive, and encouraging.`;
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Generated text
  */
-async function generateText(userRequest, projectPath, activeDocumentPath, liveContent = null) {
+const generateText = traceable(async function generateText(userRequest, projectPath, activeDocumentPath, liveContent = null) {
   console.log(`✍️ Generating text for request: "${userRequest}"`);
   
   // Load or use live active document content
@@ -301,7 +314,10 @@ Generate helpful, relevant content that matches the style and context of the exi
       message: "Error generating text: " + error.message
     };
   }
-}
+}, {
+  name: 'generate_text',
+  run_type: 'tool',
+});
 
 /**
  * Get current context information (project, file, stats)
@@ -310,7 +326,7 @@ Generate helpful, relevant content that matches the style and context of the exi
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Context information
  */
-async function getContextInfo(projectPath, activeDocumentPath, liveContent = null) {
+const getContextInfo = traceable(async function getContextInfo(projectPath, activeDocumentPath, liveContent = null) {
   console.log(`📍 Getting context info for: ${activeDocumentPath}`);
   
   try {
@@ -360,14 +376,17 @@ async function getContextInfo(projectPath, activeDocumentPath, liveContent = nul
       message: "Error getting context information: " + error.message
     };
   }
-}
+}, {
+  name: 'get_context_info',
+  run_type: 'tool',
+});
 
 /**
  * Ask a clarifying question to the user
  * @param {string} context - Context about what needs clarification
  * @returns {Promise<Object>} Question to ask user
  */
-async function askQuestion(context) {
+const askQuestion = traceable(async function askQuestion(context) {
   console.log(`❓ Need clarification: ${context}`);
   
   const prompt = `The user's request is unclear. Based on this context: "${context}"
@@ -391,7 +410,10 @@ Generate a friendly, specific question to clarify what they need. Keep it conver
       question: "Could you provide more details about what you'd like help with?"
     };
   }
-}
+}, {
+  name: 'ask_clarifying_question',
+  run_type: 'tool',
+});
 
 module.exports = {
   loadProjectDocuments,

@@ -4,8 +4,9 @@
 const { ChatOllama } = require('@langchain/ollama');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 const { searchContext, analyzeDraft, generateText, askQuestion } = require('./tools');
+const { traceable } = require('langsmith/traceable');
 
-const MODEL = "llama3.2";
+const MODEL = "llama3.1";
 
 const model = new ChatOllama({
   model: MODEL,
@@ -16,7 +17,7 @@ const model = new ChatOllama({
  * UNDERSTAND NODE
  * Analyzes user's message to determine intent and what they need
  */
-async function understandNode(state) {
+const understandNode = traceable(async function understandNode(state) {
   const lastMessage = state.messages[state.messages.length - 1];
   const messageContent = typeof lastMessage.content === 'string' 
     ? lastMessage.content 
@@ -63,13 +64,16 @@ Format: CATEGORY: explanation`;
       iterationCount: state.iterationCount + 1
     };
   }
-}
+}, {
+  name: 'understand_intent',
+  run_type: 'chain',
+});
 
 /**
  * EXECUTE NODE
  * Runs appropriate tools based on understood intent
  */
-async function executeNode(state) {
+const executeNode = traceable(async function executeNode(state) {
   const gatheredInfo = { ...state.gatheredInfo };
   const intent = (state.userIntent || '').toLowerCase();
   const userMessage = state.messages[state.messages.length - 1];
@@ -165,13 +169,16 @@ async function executeNode(state) {
       iterationCount: state.iterationCount + 1
     };
   }
-}
+}, {
+  name: 'execute_tools',
+  run_type: 'chain',
+});
 
 /**
  * RESPOND NODE
  * Synthesizes gathered information into a helpful response
  */
-async function respondNode(state) {
+const respondNode = traceable(async function respondNode(state) {
   const userMessage = state.messages[state.messages.length - 1];
   const messageContent = typeof userMessage.content === 'string'
     ? userMessage.content
@@ -276,7 +283,10 @@ If no relevant info was found, be honest but helpful.`;
       messages: [new AIMessage(`I encountered an error: ${error.message}. Please try again.`)]
     };
   }
-}
+}, {
+  name: 'respond_to_user',
+  run_type: 'chain',
+});
 
 module.exports = {
   understandNode,
