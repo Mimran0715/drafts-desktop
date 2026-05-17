@@ -169,7 +169,7 @@ ipcMain.handle('chat', async (event, message, context) => {
 | **Database** | PostgreSQL + Prisma | SQLite (better-sqlite3) |
 | **Checkpointing** | PostgresSaver | Custom SQLite checkpointer |
 | **File Access** | API endpoints + DB | Direct filesystem access |
-| **State Management** | LangGraph StateGraph | Simplified manual flow |
+| **State Management** | LangGraph StateGraph | LangGraph StateGraph + SQLite checkpoints |
 | **Document Storage** | PostgreSQL tables | Local filesystem |
 
 ## 🚀 Migration Benefits
