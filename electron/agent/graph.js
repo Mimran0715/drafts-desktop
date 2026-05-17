@@ -1,9 +1,114 @@
 // electron/agent/graph.js
 // Agent workflow graph: orchestrates the multi-node flow
 
+const { StateGraph, Annotation, START, END } = require('@langchain/langgraph');
+const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 const { understandNode, executeNode, respondNode } = require('./nodes');
 const { saveCheckpoint, getLatestCheckpoint } = require('./checkpointer');
 const { traceable } = require('langsmith/traceable');
+
+const AgentStateAnnotation = Annotation.Root({
+  messages: Annotation({
+    reducer: (left = [], right = []) => {
+      const nextMessages = Array.isArray(right) ? right : [right];
+      return left.concat(nextMessages.filter(Boolean));
+    },
+    default: () => [],
+  }),
+  userId: Annotation(),
+  projectPath: Annotation(),
+  activeDocumentPath: Annotation(),
+  liveContent: Annotation(),
+  threadId: Annotation(),
+  userIntent: Annotation(),
+  gatheredInfo: Annotation({
+    reducer: (left = {}, right = {}) => ({ ...left, ...right }),
+    default: () => ({}),
+  }),
+  generatedText: Annotation(),
+  iterationCount: Annotation({
+    default: () => 0,
+  }),
+});
+
+let compiledAgentGraph = null;
+
+function hydrateMessage(message) {
+  if (!message || typeof message !== 'object') {
+    return message;
+  }
+
+  if (message._getType || message.constructor?.name?.endsWith('Message')) {
+    return message;
+  }
+
+  const role = message.role || message.type;
+  const content = message.content || '';
+
+  if (role === 'human' || role === 'user') {
+    return new HumanMessage(content);
+  }
+
+  if (role === 'ai' || role === 'assistant' || role === 'agent') {
+    return new AIMessage(content);
+  }
+
+  if (role === 'system') {
+    return new SystemMessage(content);
+  }
+
+  return message;
+}
+
+function mergeNodeUpdateForCheckpoint(state, update) {
+  if (!update) return state;
+
+  const nextState = { ...state, ...update };
+  if (Object.prototype.hasOwnProperty.call(update, 'messages')) {
+    const updateMessages = Array.isArray(update.messages) ? update.messages : [update.messages];
+    nextState.messages = [...(state.messages || []), ...updateMessages.filter(Boolean)];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(update, 'gatheredInfo')) {
+    nextState.gatheredInfo = {
+      ...(state.gatheredInfo || {}),
+      ...(update.gatheredInfo || {}),
+    };
+  }
+
+  return nextState;
+}
+
+function checkpointNode(name, node) {
+  return async (state) => {
+    console.log(`\n--- NODE: ${name.toUpperCase()} ---`);
+    const update = await node(state);
+
+    if (state.threadId) {
+      saveCheckpoint(state.threadId, mergeNodeUpdateForCheckpoint(state, update));
+    }
+
+    return update;
+  };
+}
+
+function buildAgentGraph() {
+  if (compiledAgentGraph) {
+    return compiledAgentGraph;
+  }
+
+  compiledAgentGraph = new StateGraph(AgentStateAnnotation)
+    .addNode('understand', checkpointNode('understand', understandNode))
+    .addNode('execute', checkpointNode('execute', executeNode))
+    .addNode('respond', checkpointNode('respond', respondNode))
+    .addEdge(START, 'understand')
+    .addEdge('understand', 'execute')
+    .addEdge('execute', 'respond')
+    .addEdge('respond', END)
+    .compile();
+
+  return compiledAgentGraph;
+}
 
 /**
  * Run the agent graph: understand → execute → respond
@@ -18,52 +123,29 @@ const runAgentGraph = traceable(async function runAgentGraph(initialState, confi
   console.log('Thread ID:', threadId);
   
   // Load previous state if continuing a conversation
-  let state = { ...initialState };
+  let state = { ...initialState, threadId };
   
   if (threadId) {
     const checkpoint = getLatestCheckpoint(threadId);
     if (checkpoint) {
       console.log('📦 Loaded checkpoint from', checkpoint.createdAt);
+      const checkpointMessages = (checkpoint.state.messages || []).map(hydrateMessage);
+
       // Merge checkpoint state with new message
       state = {
         ...checkpoint.state,
         ...initialState,
-        messages: [...(checkpoint.state.messages || []), ...initialState.messages],
+        threadId,
+        messages: [...checkpointMessages, ...initialState.messages],
+        gatheredInfo: checkpoint.state.gatheredInfo || {},
         iterationCount: checkpoint.state.iterationCount || 0
       };
     }
   }
   
   try {
-    // NODE 1: UNDERSTAND
-    console.log('\n--- NODE 1: UNDERSTAND ---');
-    const understandResult = await understandNode(state);
-    state = { ...state, ...understandResult };
-    
-    // Save checkpoint after understand
-    if (threadId) {
-      saveCheckpoint(threadId, state);
-    }
-    
-    // NODE 2: EXECUTE
-    console.log('\n--- NODE 2: EXECUTE ---');
-    const executeResult = await executeNode(state);
-    state = { ...state, ...executeResult };
-    
-    // Save checkpoint after execute
-    if (threadId) {
-      saveCheckpoint(threadId, state);
-    }
-    
-    // NODE 3: RESPOND
-    console.log('\n--- NODE 3: RESPOND ---');
-    const respondResult = await respondNode(state);
-    state = { ...state, ...respondResult };
-    
-    // Save final checkpoint
-    if (threadId) {
-      saveCheckpoint(threadId, state);
-    }
+    const graph = buildAgentGraph();
+    state = await graph.invoke(state);
     
     console.log('\n✅ Agent graph completed\n');
     
@@ -79,15 +161,13 @@ const runAgentGraph = traceable(async function runAgentGraph(initialState, confi
 
 /**
  * Get or create agent graph (for compatibility with LangGraph API)
- * In our simplified version, this just returns the runAgentGraph function
  */
 async function getAgentGraph() {
-  return {
-    invoke: runAgentGraph
-  };
+  return buildAgentGraph();
 }
 
 module.exports = {
   runAgentGraph,
-  getAgentGraph
+  getAgentGraph,
+  buildAgentGraph
 };
