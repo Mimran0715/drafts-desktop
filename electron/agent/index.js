@@ -23,11 +23,13 @@ function cleanChatOutput(content) {
  * @param {string} params.activeDocumentPath - Path to active document
  * @param {string} [params.threadId] - Thread ID for conversation continuity
  * @param {Object} [params.liveContent] - Live content from editor {name, content, path}
+ * @param {boolean} [params.ragEnabled] - Whether to retrieve project context for this request
+ * @param {string} [params.modelName] - Ollama model name to use
  * @param {Function} [params.onToken] - Optional callback for streamed chat output chunks
  * @returns {Promise<Object>} Agent response
  */
 async function runAgent(params) {
-  const { message, userId, projectPath, activeDocumentPath, threadId, liveContent, onToken } = params;
+  const { message, userId, projectPath, activeDocumentPath, threadId, liveContent, ragEnabled, modelName, onToken } = params;
   
   // Generate thread ID if not provided
   const thread = threadId || `thread_${Date.now()}`;
@@ -40,6 +42,7 @@ async function runAgent(params) {
   console.log('Active Document:', activeDocumentPath);
   console.log('Thread:', thread);
   console.log('Message:', message);
+  console.log('Model:', modelName || 'llama3.1');
   console.log('Live Content:', liveContent ? 'Yes' : 'No');
   console.log('='.repeat(60) + '\n');
   
@@ -52,6 +55,8 @@ async function runAgent(params) {
       ...createInitialState(message, userId, projectPath, activeDocumentPath),
       messages: [new HumanMessage(message)],
       liveContent: liveContent, // Pass live content to tools
+      ragEnabled: !!ragEnabled,
+      modelName: modelName || 'llama3.1',
       streamWriter: typeof onToken === 'function' ? onToken : null
     };
     

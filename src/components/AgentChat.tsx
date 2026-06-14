@@ -11,8 +11,13 @@ interface Message {
 
 interface AgentChatProps {
   messages: Message[];
-  onSend: (message: string) => void;
+  onSend: (message: string, options: { ragEnabled: boolean; modelName: string }) => void;
   isLoading?: boolean;
+  ragEnabled: boolean;
+  onRagEnabledChange: (enabled: boolean) => void;
+  selectedModel: string;
+  availableModels: string[];
+  onSelectedModelChange: (modelName: string) => void;
 }
 
 function cleanChatOutput(content: string) {
@@ -23,7 +28,16 @@ function cleanChatOutput(content: string) {
     .replace(/\*/g, '');
 }
 
-export default function AgentChat({ messages, onSend, isLoading }: AgentChatProps) {
+export default function AgentChat({
+  messages,
+  onSend,
+  isLoading,
+  ragEnabled,
+  onRagEnabledChange,
+  selectedModel,
+  availableModels,
+  onSelectedModelChange
+}: AgentChatProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +51,7 @@ export default function AgentChat({ messages, onSend, isLoading }: AgentChatProp
 
   const handleSend = () => {
     if (input.trim() && !isLoading) {
-      onSend(input);
+      onSend(input, { ragEnabled, modelName: selectedModel });
       setInput('');
     }
   };
@@ -128,6 +142,39 @@ export default function AgentChat({ messages, onSend, isLoading }: AgentChatProp
         className="p-4 border-t"
         style={{ borderColor: 'var(--border-main)' }}
       >
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <label 
+            className="flex items-center gap-2 text-xs select-none"
+            style={{ color: 'var(--sidebar-text-muted)' }}
+          >
+            <input
+              type="checkbox"
+              checked={ragEnabled}
+              onChange={(e) => onRagEnabledChange(e.target.checked)}
+              disabled={isLoading}
+            />
+            <span>Use project context</span>
+          </label>
+          <select
+            value={selectedModel}
+            onChange={(e) => onSelectedModelChange(e.target.value)}
+            disabled={isLoading}
+            className="text-xs border px-2 py-1 max-w-[160px]"
+            style={{
+              background: 'var(--editor-bg)',
+              color: 'var(--editor-text)',
+              borderColor: 'var(--border-input)',
+              borderRadius: 'var(--radius-sm)'
+            }}
+            title="Ollama model"
+          >
+            {availableModels.map(model => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex gap-2">
           <textarea
             value={input}

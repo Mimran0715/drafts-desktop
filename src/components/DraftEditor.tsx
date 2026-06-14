@@ -34,7 +34,10 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
   onTabClose, 
   onContentChange,
   onTabRename,
-  onNewTab 
+  onNewTab,
+  pendingSuggestion,
+  onAcceptSuggestion,
+  onRejectSuggestion
 }, ref) {
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [wordCount, setWordCount] = useState(0);
@@ -651,6 +654,64 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
       <div className="flex-1 overflow-hidden">
         {activeTab ? (
           <div className="h-full px-8 py-8 overflow-y-auto">
+            {pendingSuggestion && (
+              <div
+                className="mb-6 border shadow-sm"
+                style={{
+                  background: 'var(--sidebar-bg)',
+                  borderColor: 'var(--border-main)',
+                  borderRadius: 'var(--radius-md)'
+                }}
+              >
+                <div
+                  className="px-4 py-3 border-b flex items-center justify-between gap-3"
+                  style={{ borderColor: 'var(--border-main)' }}
+                >
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--sidebar-text)' }}
+                  >
+                    Suggested continuation
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onRejectSuggestion}
+                      className="px-3 py-1.5 text-sm border transition-colors"
+                      style={{
+                        background: 'var(--btn-secondary-bg)',
+                        borderColor: 'var(--border-input)',
+                        color: 'var(--sidebar-text)',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onAcceptSuggestion}
+                      className="px-3 py-1.5 text-sm font-medium transition-colors"
+                      style={{
+                        background: 'var(--btn-primary-bg)',
+                        color: 'var(--chat-user-text)',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                    >
+                      Accept
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className="px-4 py-3 text-sm max-h-56 overflow-y-auto whitespace-pre-wrap"
+                  style={{
+                    color: 'var(--sidebar-text)',
+                    lineHeight: 1.6
+                  }}
+                >
+                  {pendingSuggestion}
+                </div>
+              </div>
+            )}
             <RichEditor
               ref={editorRef}
               value={activeTab.content}

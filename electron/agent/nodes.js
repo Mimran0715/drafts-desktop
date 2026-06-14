@@ -7,11 +7,19 @@ const { searchContext, analyzeDraft, generateText, askQuestion } = require('./to
 const { traceable } = require('langsmith/traceable');
 
 const MODEL = "llama3.1";
+const modelCache = new Map();
 
-const model = new ChatOllama({
-  model: MODEL,
-  temperature: 0.7,
-});
+function getModel(modelName = MODEL) {
+  const name = modelName || MODEL;
+  if (!modelCache.has(name)) {
+    modelCache.set(name, new ChatOllama({
+      model: name,
+      temperature: 0.7,
+    }));
+  }
+
+  return modelCache.get(name);
+}
 
 function chunkContentToText(content) {
   if (typeof content === 'string') return content;
@@ -28,6 +36,8 @@ function chunkContentToText(content) {
 }
 
 async function invokeModel(messages, options = {}) {
+  const model = getModel(options.modelName);
+
   if (!options.onToken) {
     const response = await model.invoke(messages);
     return chunkContentToText(response.content);
@@ -109,6 +119,21 @@ function formatToolFallbackResponse(state, errorMessage) {
   return `I had trouble reaching the local Ollama model for the final response: ${errorMessage}. Please make sure Ollama is running and that the "${MODEL}" model is available.`;
 }
 
+function formatRagContext(searchResults) {
+  if (!searchResults?.found || !Array.isArray(searchResults.results) || searchResults.results.length === 0) {
+    return '';
+  }
+
+  return searchResults.results.map(result => {
+    const snippets = result.matches
+      .map(match => match.context)
+      .filter(Boolean)
+      .join('\n\n');
+
+    return `--- ${result.documentName} ---\n${snippets}`;
+  }).join('\n\n');
+}
+
 /**
  * UNDERSTAND NODE
  * Analyzes user's message to determine intent and what they need
@@ -147,7 +172,7 @@ Format: CATEGORY: explanation`;
   }
   
   try {
-    const response = await model.invoke([
+    const response = await getModel(state.modelName).invoke([
       new SystemMessage("You are analyzing user intent for a writing assistant."),
       new HumanMessage(prompt)
     ]);
@@ -193,6 +218,15 @@ const executeNode = traceable(async function executeNode(state) {
   console.log('Intent category:', intent);
   
   try {
+    if (state.ragEnabled && state.projectPath) {
+      console.log('📚 Retrieving project context for RAG...');
+      gatheredInfo.ragResults = await searchContext(
+        messageContent,
+        state.projectPath,
+        state.liveContent
+      );
+    }
+
     // SEARCH - Find information in project documents
     if (intent.includes('search') || intent.includes('find')) {
       console.log('🔍 Running searchContext tool...');
@@ -206,11 +240,11 @@ const executeNode = traceable(async function executeNode(state) {
       const searchQuery = searchTerms || messageContent;
       console.log('Search query:', searchQuery);
       
-      const searchResults = await searchContext(
-        searchQuery,
-        state.projectPath,
-        state.liveContent
-      );
+      const searchResults = gatheredInfo.ragResults || await searchContext(
+          searchQuery,
+          state.projectPath,
+          state.liveContent
+        );
       
       gatheredInfo.searchResults = searchResults;
     }
@@ -224,7 +258,11 @@ const executeNode = traceable(async function executeNode(state) {
           state.activeDocumentPath,
           state.projectPath,
           state.liveContent,
-          { onToken: state.streamWriter }
+          {
+            onToken: state.streamWriter,
+            ragResults: gatheredInfo.ragResults,
+            modelName: state.modelName
+          }
         );
         gatheredInfo.analysis = analysis;
       } else {
@@ -243,7 +281,11 @@ const executeNode = traceable(async function executeNode(state) {
         messageContent,
         state.projectPath,
         state.activeDocumentPath,
-        state.liveContent
+        state.liveContent,
+        {
+          ragResults: gatheredInfo.ragResults,
+          modelName: state.modelName
+        }
       );
       gatheredInfo.generated = generated;
     }
@@ -252,7 +294,10 @@ const executeNode = traceable(async function executeNode(state) {
     if (intent.includes('question') && !gatheredInfo.searchResults && !gatheredInfo.analysis && !gatheredInfo.generated) {
       console.log('❓ User needs clarification...');
       
-      const clarification = await askQuestion(messageContent, { onToken: state.streamWriter });
+      const clarification = await askQuestion(messageContent, {
+        onToken: state.streamWriter,
+        modelName: state.modelName
+      });
       gatheredInfo.clarification = clarification;
     }
     
@@ -300,7 +345,7 @@ const respondNode = traceable(async function respondNode(state) {
     console.log('✅ Returning generated text for editor insertion');
     
     // Return a brief explanation + the generated text
-    const response = `I'll continue your story from where you left off. Here's what I've written:`;
+    const response = `I'll continue your story from where you left off. The suggested text is ready above the editor.`;
     if (state.streamWriter) {
       state.streamWriter(response);
     }
@@ -365,6 +410,11 @@ const respondNode = traceable(async function respondNode(state) {
   
   // Build context from gathered information for other responses
   let contextSummary = '';
+  const ragContext = formatRagContext(state.gatheredInfo.ragResults);
+
+  if (ragContext) {
+    contextSummary += `\n\nRetrieved Project Context:\n${ragContext}`;
+  }
   
   if (state.gatheredInfo.searchResults) {
     const sr = state.gatheredInfo.searchResults;
@@ -430,7 +480,10 @@ If no relevant info was found, be honest but helpful.`;
     const responseText = await invokeModel([
       new SystemMessage(systemPrompt),
       new HumanMessage("Provide your response now.")
-    ], { onToken: state.streamWriter });
+    ], {
+      onToken: state.streamWriter,
+      modelName: state.modelName
+    });
     
     console.log('✅ Response generated');
     

@@ -8,11 +8,19 @@ const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
 
 const MODEL = "llama3.1";
+const modelCache = new Map();
 
-const model = new ChatOllama({
-  model: MODEL,
-  temperature: 0.7,
-});
+function getModel(modelName = MODEL) {
+  const name = modelName || MODEL;
+  if (!modelCache.has(name)) {
+    modelCache.set(name, new ChatOllama({
+      model: name,
+      temperature: 0.7,
+    }));
+  }
+
+  return modelCache.get(name);
+}
 
 function chunkContentToText(content) {
   if (typeof content === 'string') return content;
@@ -29,6 +37,8 @@ function chunkContentToText(content) {
 }
 
 async function invokeModel(messages, options = {}) {
+  const model = getModel(options.modelName);
+
   if (!options.onToken) {
     const response = await model.invoke(messages);
     return chunkContentToText(response.content);
@@ -237,6 +247,21 @@ const searchContext = traceable(async function searchContext(query, projectPath,
   run_type: 'tool',
 });
 
+function formatRagContext(searchResults) {
+  if (!searchResults?.found || !Array.isArray(searchResults.results) || searchResults.results.length === 0) {
+    return '';
+  }
+
+  return searchResults.results.map(result => {
+    const snippets = result.matches
+      .map(match => match.context)
+      .filter(Boolean)
+      .join('\n\n');
+
+    return `--- ${result.documentName} ---\n${snippets}`;
+  }).join('\n\n');
+}
+
 /**
  * Analyze the active draft document
  * @param {string} documentPath - Path to document to analyze
@@ -277,6 +302,11 @@ const analyzeDraft = traceable(async function analyzeDraft(documentPath, project
   }
   
   // Use LLM to analyze the draft
+  const ragContext = formatRagContext(options.ragResults);
+  const ragPromptSection = ragContext
+    ? `\nRelevant project context:\n${ragContext}\n\nUse this context to understand continuity, recurring details, and project-level patterns. Do not over-weight it over the active draft.\n`
+    : '';
+
   const prompt = `Analyze this writing draft and provide constructive feedback.
 
 Document: ${document.name}
@@ -284,6 +314,7 @@ Word count: ${wordCount}
 
 Content:
 ${document.content}
+${ragPromptSection}
 
 Provide:
 1. Strengths (what's working well)
@@ -360,6 +391,11 @@ const generateText = traceable(async function generateText(userRequest, projectP
     contextDocs.forEach(doc => {
       contextString += `\n--- ${doc.name} ---\n${doc.content.substring(0, 500)}...\n`;
     });
+  }
+
+  const ragContext = formatRagContext(options.ragResults);
+  if (ragContext) {
+    contextString += `\nRetrieved project context:\n${ragContext}\n`;
   }
   
   const prompt = `Based on the following context, help with this request: "${userRequest}"

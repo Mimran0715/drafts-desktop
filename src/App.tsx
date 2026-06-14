@@ -18,6 +18,7 @@ declare global {
       chat: (message: string, context: any) => Promise<any>;
       chatStream?: (message: string, context: any, streamId: string) => Promise<any>;
       onChatStreamChunk?: (callback: (payload: { streamId: string; chunk: string }) => void) => () => void;
+      getOllamaModels?: () => Promise<string[]>;
       getRecentProjects: () => Promise<any[]>;
       addRecentProject: (projectId: string, name: string, projectPath: string) => Promise<any>;
       getConversationHistory: (threadId: string) => Promise<any[]>;
@@ -53,6 +54,10 @@ interface Message {
 const STREAM_CHARS_PER_TICK = 2;
 const STREAM_TICK_MS = 45;
 const LAST_PROJECT_KEY = 'lastProject';
+const RAG_ENABLED_KEY = 'ragEnabled';
+const SELECTED_MODEL_KEY = 'selectedOllamaModel';
+const DEFAULT_OLLAMA_MODEL = 'llama3.1';
+const SUPPORTED_OLLAMA_MODELS = ['llama3.1', 'llama3.2'];
 
 function getFolderName(folderPath: string) {
   return folderPath.split('/').pop() || folderPath.split('\\').pop() || 'Untitled';
@@ -67,6 +72,9 @@ function AppContent() {
   const [showFileModal, setShowFileModal] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
+  const [ragEnabled, setRagEnabled] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
   
   // Autosave refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,26 +148,44 @@ function AppContent() {
   useEffect(() => {
     let isCancelled = false;
 
-    const restoreLastProject = async () => {
+    const restorePreferences = async () => {
       if (!window.electronAPI) return;
 
       try {
-        const savedProject = await window.electronAPI.getPreference(LAST_PROJECT_KEY, null);
-        if (isCancelled || !savedProject?.path) return;
+        const [savedProject, savedRagEnabled] = await Promise.all([
+          window.electronAPI.getPreference(LAST_PROJECT_KEY, null),
+          window.electronAPI.getPreference(RAG_ENABLED_KEY, false)
+        ]);
+        const savedModel = await window.electronAPI.getPreference(SELECTED_MODEL_KEY, DEFAULT_OLLAMA_MODEL);
+        const models = window.electronAPI.getOllamaModels
+          ? await window.electronAPI.getOllamaModels()
+          : [DEFAULT_OLLAMA_MODEL];
 
-        const project: Project = {
-          id: savedProject.id || Date.now().toString(),
-          name: savedProject.name || getFolderName(savedProject.path),
-          path: savedProject.path
-        };
+        if (isCancelled) return;
 
-        setCurrentProject(project);
+        setRagEnabled(!!savedRagEnabled);
+        const nextModels = models.filter(model => SUPPORTED_OLLAMA_MODELS.includes(model));
+        const nextSelectedModel = nextModels.includes(savedModel)
+          ? savedModel
+          : DEFAULT_OLLAMA_MODEL;
+        setAvailableModels(nextModels);
+        setSelectedModel(nextSelectedModel);
+
+        if (savedProject?.path) {
+          const project: Project = {
+            id: savedProject.id || Date.now().toString(),
+            name: savedProject.name || getFolderName(savedProject.path),
+            path: savedProject.path
+          };
+
+          setCurrentProject(project);
+        }
       } catch (error) {
-        console.error('Error restoring last project:', error);
+        console.error('Error restoring preferences:', error);
       }
     };
 
-    restoreLastProject();
+    restorePreferences();
 
     return () => {
       isCancelled = true;
@@ -412,7 +438,27 @@ function AppContent() {
     ));
   };
 
-  const handleChatSend = async (message: string) => {
+  const handleRagEnabledChange = async (enabled: boolean) => {
+    setRagEnabled(enabled);
+
+    try {
+      await window.electronAPI.setPreference(RAG_ENABLED_KEY, enabled);
+    } catch (error) {
+      console.error('Error saving RAG preference:', error);
+    }
+  };
+
+  const handleSelectedModelChange = async (modelName: string) => {
+    setSelectedModel(modelName);
+
+    try {
+      await window.electronAPI.setPreference(SELECTED_MODEL_KEY, modelName);
+    } catch (error) {
+      console.error('Error saving selected model:', error);
+    }
+  };
+
+  const handleChatSend = async (message: string, options: { ragEnabled: boolean; modelName: string }) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -446,7 +492,9 @@ function AppContent() {
         } : null,
         projectPath: currentProject?.path,
         threadId: threadId,
-        liveContent: liveContent // Pass live editor content
+        liveContent: liveContent, // Pass live editor content
+        ragEnabled: options.ragEnabled,
+        modelName: options.modelName
       };
 
       console.log('Sending to agent:', context);
@@ -589,6 +637,11 @@ function AppContent() {
             messages={messages}
             onSend={handleChatSend}
             isLoading={isLoading}
+            ragEnabled={ragEnabled}
+            onRagEnabledChange={handleRagEnabledChange}
+            selectedModel={selectedModel}
+            availableModels={availableModels}
+            onSelectedModelChange={handleSelectedModelChange}
           />
         }
       />

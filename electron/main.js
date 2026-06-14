@@ -38,6 +38,8 @@ const { runAgent } = require('./agent/index.js');
 const db = require('./database.js');
 
 let mainWindow;
+const DEFAULT_OLLAMA_MODEL = 'llama3.1';
+const SUPPORTED_OLLAMA_MODELS = ['llama3.1', 'llama3.2'];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -275,7 +277,9 @@ ipcMain.handle('chat', async (event, message, context) => {
       projectPath,
       activeDocumentPath,
       threadId,
-      liveContent: context.liveContent || null
+      liveContent: context.liveContent || null,
+      ragEnabled: !!context.ragEnabled,
+      modelName: context.modelName || DEFAULT_OLLAMA_MODEL
     });
     
     return result;
@@ -321,6 +325,8 @@ ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
       activeDocumentPath,
       threadId,
       liveContent: context.liveContent || null,
+      ragEnabled: !!context.ragEnabled,
+      modelName: context.modelName || DEFAULT_OLLAMA_MODEL,
       onToken: (chunk) => {
         if (chunk) {
           event.sender.send('chat-stream-chunk', {
@@ -346,6 +352,26 @@ ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
       response: `Error: ${error.message || 'Failed to get AI response.'}`,
       timestamp: new Date(),
     };
+  }
+});
+
+ipcMain.handle('get-ollama-models', async () => {
+  try {
+    const response = await fetch('http://127.0.0.1:11434/api/tags');
+    if (!response.ok) {
+      throw new Error(`Ollama returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const installedModels = Array.isArray(data.models)
+      ? data.models.map(model => model.name).filter(Boolean)
+      : [];
+    const models = SUPPORTED_OLLAMA_MODELS.filter(model => installedModels.includes(model));
+
+    return models.length > 0 ? models : SUPPORTED_OLLAMA_MODELS;
+  } catch (error) {
+    console.error('Error loading Ollama models:', error.message);
+    return SUPPORTED_OLLAMA_MODELS;
   }
 });
 
