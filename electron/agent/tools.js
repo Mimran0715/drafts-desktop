@@ -3,6 +3,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const mammoth = require('mammoth');
 const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
 
@@ -13,6 +14,72 @@ const model = new ChatOllama({
   temperature: 0.7,
 });
 
+function chunkContentToText(content) {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map(part => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && typeof part.text === 'string') return part.text;
+        return '';
+      })
+      .join('');
+  }
+  return content ? String(content) : '';
+}
+
+async function invokeModel(messages, options = {}) {
+  if (!options.onToken) {
+    const response = await model.invoke(messages);
+    return chunkContentToText(response.content);
+  }
+
+  let content = '';
+  const stream = await model.stream(messages);
+
+  for await (const chunk of stream) {
+    const text = chunkContentToText(chunk.content);
+    if (!text) continue;
+    content += text;
+    options.onToken(text);
+  }
+
+  return content;
+}
+
+function isSupportedFile(filename) {
+  const ext = filename.toLowerCase();
+  return ext.endsWith('.md') || ext.endsWith('.txt') || ext.endsWith('.docx') || ext.endsWith('.doc');
+}
+
+async function readDocumentContent(filePath) {
+  const lowerFilePath = filePath.toLowerCase();
+
+  if (lowerFilePath.endsWith('.md') || lowerFilePath.endsWith('.txt')) {
+    return fs.readFile(filePath, 'utf-8');
+  }
+
+  if (lowerFilePath.endsWith('.docx')) {
+    const stats = await fs.stat(filePath);
+    if (stats.size === 0) {
+      console.warn(`Skipping empty .docx file ${path.basename(filePath)}`);
+      return '';
+    }
+
+    const result = await mammoth.extractRawText({ path: filePath });
+    if (result.messages.length > 0) {
+      console.log(`Mammoth warnings for ${path.basename(filePath)}:`, result.messages);
+    }
+    return result.value;
+  }
+
+  if (lowerFilePath.endsWith('.doc')) {
+    return '';
+  }
+
+  return '';
+}
+
 /**
  * Load all documents from a project folder
  * @param {string} projectPath - Path to project folder
@@ -21,23 +88,25 @@ const model = new ChatOllama({
 const loadProjectDocuments = traceable(async function loadProjectDocuments(projectPath) {
   try {
     const files = await fs.readdir(projectPath);
-    const supportedFiles = files.filter(file => {
-      const ext = file.toLowerCase();
-      return ext.endsWith('.md') || ext.endsWith('.txt');
-    });
+    const supportedFiles = files.filter(isSupportedFile);
     
     const documents = await Promise.all(
       supportedFiles.map(async (filename) => {
-        const filePath = path.join(projectPath, filename);
-        const content = await fs.readFile(filePath, 'utf-8');
-        const stats = await fs.stat(filePath);
-        
-        return {
-          name: filename,
-          path: filePath,
-          content,
-          modified: stats.mtime
-        };
+        try {
+          const filePath = path.join(projectPath, filename);
+          const content = await readDocumentContent(filePath);
+          const stats = await fs.stat(filePath);
+          
+          return {
+            name: filename,
+            path: filePath,
+            content,
+            modified: stats.mtime
+          };
+        } catch (error) {
+          console.error(`Error loading project document ${filename}:`, error.message);
+          return null;
+        }
       })
     );
     
@@ -58,7 +127,7 @@ const loadProjectDocuments = traceable(async function loadProjectDocuments(proje
  */
 const loadDocument = traceable(async function loadDocument(documentPath) {
   try {
-    const content = await fs.readFile(documentPath, 'utf-8');
+    const content = await readDocumentContent(documentPath);
     const stats = await fs.stat(documentPath);
     
     return {
@@ -113,7 +182,6 @@ const searchContext = traceable(async function searchContext(query, projectPath,
   const results = [];
   
   for (const doc of documents) {
-    const content = doc.content.toLowerCase();
     let relevanceScore = 0;
     const matchedLines = [];
     
@@ -176,7 +244,7 @@ const searchContext = traceable(async function searchContext(query, projectPath,
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Analysis results
  */
-const analyzeDraft = traceable(async function analyzeDraft(documentPath, projectPath, liveContent = null) {
+const analyzeDraft = traceable(async function analyzeDraft(documentPath, projectPath, liveContent = null, options = {}) {
   console.log(`📝 Analyzing draft: ${documentPath}`);
   
   let document;
@@ -203,6 +271,10 @@ const analyzeDraft = traceable(async function analyzeDraft(documentPath, project
   }
   
   const wordCount = document.content.split(/\s+/).filter(word => word.length > 0).length;
+  const streamPrefix = `Here's my read on "${document.name}" (${wordCount} words):\n\n`;
+  if (options.onToken) {
+    options.onToken(streamPrefix);
+  }
   
   // Use LLM to analyze the draft
   const prompt = `Analyze this writing draft and provide constructive feedback.
@@ -222,17 +294,17 @@ Provide:
 Be specific, constructive, and encouraging.`;
 
   try {
-    const response = await model.invoke([
+    const analysis = await invokeModel([
       { role: 'system', content: 'You are a supportive writing coach providing detailed feedback.' },
       { role: 'user', content: prompt }
-    ]);
+    ], options);
     
     return {
       success: true,
       documentName: document.name,
       wordCount: wordCount,
       characterCount: document.content.length,
-      analysis: response.content
+      analysis
     };
   } catch (error) {
     console.error('Error analyzing draft:', error);
@@ -254,7 +326,7 @@ Be specific, constructive, and encouraging.`;
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Generated text
  */
-const generateText = traceable(async function generateText(userRequest, projectPath, activeDocumentPath, liveContent = null) {
+const generateText = traceable(async function generateText(userRequest, projectPath, activeDocumentPath, liveContent = null, options = {}) {
   console.log(`✍️ Generating text for request: "${userRequest}"`);
   
   // Load or use live active document content
@@ -297,14 +369,14 @@ ${contextString}
 Generate helpful, relevant content that matches the style and context of the existing work.`;
 
   try {
-    const response = await model.invoke([
+    const generated = await invokeModel([
       { role: 'system', content: 'You are a creative writing assistant helping to generate and expand content.' },
       { role: 'user', content: prompt }
-    ]);
+    ], options);
     
     return {
       success: true,
-      generated: response.content,
+      generated,
       request: userRequest
     };
   } catch (error) {
@@ -386,7 +458,7 @@ const getContextInfo = traceable(async function getContextInfo(projectPath, acti
  * @param {string} context - Context about what needs clarification
  * @returns {Promise<Object>} Question to ask user
  */
-const askQuestion = traceable(async function askQuestion(context) {
+const askQuestion = traceable(async function askQuestion(context, options = {}) {
   console.log(`❓ Need clarification: ${context}`);
   
   const prompt = `The user's request is unclear. Based on this context: "${context}"
@@ -394,14 +466,14 @@ const askQuestion = traceable(async function askQuestion(context) {
 Generate a friendly, specific question to clarify what they need. Keep it conversational and helpful.`;
 
   try {
-    const response = await model.invoke([
+    const question = await invokeModel([
       { role: 'system', content: 'You are a helpful assistant asking clarifying questions.' },
       { role: 'user', content: prompt }
-    ]);
+    ], options);
     
     return {
       needsClarification: true,
-      question: response.content
+      question
     };
   } catch (error) {
     console.error('Error asking question:', error);

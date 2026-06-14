@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // AI chat
   chat: (message, context) => ipcRenderer.invoke('chat', message, context),
+  chatStream: (message, context, streamId) => ipcRenderer.invoke('chat-stream', message, context, streamId),
+  onChatStreamChunk: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('chat-stream-chunk', listener);
+    return () => ipcRenderer.removeListener('chat-stream-chunk', listener);
+  },
   
   // Database - Recent projects
   getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
 import { useEditorCommands } from './useEditorCommands';
@@ -19,12 +19,15 @@ interface DraftEditorProps {
   onContentChange: (tabId: string, content: string) => void;
   onTabRename?: (tabId: string, newTitle: string) => void;
   onNewTab: () => void;
+  pendingSuggestion?: string | null;
+  onAcceptSuggestion?: () => void;
+  onRejectSuggestion?: () => void;
 }
 
 type FontFamily = 'crimson' | 'inter' | 'georgia' | 'times' | 'courier';
 type FontSize = number;
 
-export default function DraftEditor({ 
+const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function DraftEditor({ 
   tabs, 
   activeTabId, 
   onTabChange, 
@@ -32,7 +35,7 @@ export default function DraftEditor({
   onContentChange,
   onTabRename,
   onNewTab 
-}: DraftEditorProps) {
+}, ref) {
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
@@ -64,6 +67,18 @@ export default function DraftEditor({
 
   const editorRef = useRef<RichEditorHandle>(null);
   const commands = useEditorCommands(editorRef);
+
+  useImperativeHandle(ref, () => ({
+    focus() {
+      editorRef.current?.focus();
+    },
+    getHTML() {
+      return editorRef.current?.getHTML() ?? '';
+    },
+    getText() {
+      return editorRef.current?.getText() ?? '';
+    }
+  }));
 
   // Check selection state when format menu opens
   useEffect(() => {
@@ -661,4 +676,6 @@ export default function DraftEditor({
       </div>
     </div>
   );
-}
+});
+
+export default DraftEditor;

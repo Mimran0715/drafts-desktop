@@ -19,6 +19,7 @@ const AgentStateAnnotation = Annotation.Root({
   projectPath: Annotation(),
   activeDocumentPath: Annotation(),
   liveContent: Annotation(),
+  streamWriter: Annotation(),
   threadId: Annotation(),
   userIntent: Annotation(),
   gatheredInfo: Annotation({

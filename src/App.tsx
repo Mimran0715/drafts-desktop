@@ -16,6 +16,8 @@ declare global {
       saveDocument: (filePath: string, content: string) => Promise<any>;
       createDocument: (folderPath: string, filename: string) => Promise<any>;
       chat: (message: string, context: any) => Promise<any>;
+      chatStream?: (message: string, context: any, streamId: string) => Promise<any>;
+      onChatStreamChunk?: (callback: (payload: { streamId: string; chunk: string }) => void) => () => void;
       getRecentProjects: () => Promise<any[]>;
       addRecentProject: (projectId: string, name: string, projectPath: string) => Promise<any>;
       getConversationHistory: (threadId: string) => Promise<any[]>;
@@ -48,6 +50,14 @@ interface Message {
   hasGeneratedText?: boolean;
 }
 
+const STREAM_CHARS_PER_TICK = 2;
+const STREAM_TICK_MS = 45;
+const LAST_PROJECT_KEY = 'lastProject';
+
+function getFolderName(folderPath: string) {
+  return folderPath.split('/').pop() || folderPath.split('\\').pop() || 'Untitled';
+}
+
 function AppContent() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -62,6 +72,61 @@ function AppContent() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSavingRef = useRef(false);
   const editorRef = useRef<RichEditorHandle>(null);
+  const streamQueueRef = useRef('');
+  const streamIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamMessageIdRef = useRef<string | null>(null);
+
+  const rememberProject = async (project: Project) => {
+    setCurrentProject(project);
+    setMessages([]);
+    setThreadId(null);
+    setPendingSuggestion(null);
+
+    try {
+      await window.electronAPI.addRecentProject(project.id, project.name, project.path);
+      await window.electronAPI.setPreference(LAST_PROJECT_KEY, project);
+    } catch (error) {
+      console.error('Error remembering project:', error);
+    }
+  };
+
+  const stopStreamReveal = () => {
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+    }
+    streamQueueRef.current = '';
+    streamMessageIdRef.current = null;
+  };
+
+  const ensureStreamReveal = (messageId: string) => {
+    streamMessageIdRef.current = messageId;
+    if (streamIntervalRef.current) return;
+
+    streamIntervalRef.current = setInterval(() => {
+      const activeMessageId = streamMessageIdRef.current;
+      if (!activeMessageId) {
+        stopStreamReveal();
+        return;
+      }
+
+      const nextChunk = streamQueueRef.current.slice(0, STREAM_CHARS_PER_TICK);
+      streamQueueRef.current = streamQueueRef.current.slice(STREAM_CHARS_PER_TICK);
+
+      if (nextChunk) {
+        setMessages(msgs => msgs.map(msg =>
+          msg.id === activeMessageId
+            ? { ...msg, content: msg.content + nextChunk }
+            : msg
+        ));
+      }
+
+      if (!streamQueueRef.current) {
+        clearInterval(streamIntervalRef.current!);
+        streamIntervalRef.current = null;
+      }
+    }, STREAM_TICK_MS);
+  };
 
   useEffect(() => {
     if (currentProject) {
@@ -71,6 +136,35 @@ function AppContent() {
       setActiveTabId('');
     }
   }, [currentProject]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const restoreLastProject = async () => {
+      if (!window.electronAPI) return;
+
+      try {
+        const savedProject = await window.electronAPI.getPreference(LAST_PROJECT_KEY, null);
+        if (isCancelled || !savedProject?.path) return;
+
+        const project: Project = {
+          id: savedProject.id || Date.now().toString(),
+          name: savedProject.name || getFolderName(savedProject.path),
+          path: savedProject.path
+        };
+
+        setCurrentProject(project);
+      } catch (error) {
+        console.error('Error restoring last project:', error);
+      }
+    };
+
+    restoreLastProject();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const loadProjectDocuments = async () => {
     if (!currentProject) return;
@@ -112,7 +206,7 @@ function AppContent() {
       console.log('Selected path:', path);
       if (!path) return;
 
-      const folderName = path.split('/').pop() || path.split('\\').pop() || 'Untitled';
+      const folderName = getFolderName(path);
     
       const newProject: Project = {
         id: Date.now().toString(),
@@ -120,7 +214,7 @@ function AppContent() {
         path: path
       };
 
-      setCurrentProject(newProject);
+      await rememberProject(newProject);
       
       try {
         const welcomeDoc = await window.electronAPI.createDocument(path, 'Welcome.md');
@@ -159,7 +253,7 @@ function AppContent() {
       console.log('Selected path:', path);
       if (!path) return;
 
-      const folderName = path.split('/').pop() || path.split('\\').pop() || 'Untitled';
+      const folderName = getFolderName(path);
       
       const newProject: Project = {
         id: Date.now().toString(),
@@ -167,7 +261,7 @@ function AppContent() {
         path: path
       };
 
-      setCurrentProject(newProject);
+      await rememberProject(newProject);
     } catch (error) {
       console.error('Error opening project:', error);
       alert('Failed to open project');
@@ -178,8 +272,7 @@ function AppContent() {
     console.log('Selected recent project:', project);
     
     try {
-      await window.electronAPI.addRecentProject(project.id, project.name, project.path);
-      setCurrentProject(project);
+      await rememberProject(project);
     } catch (error) {
       console.error('Error selecting recent project:', error);
       alert('Failed to open project');
@@ -295,6 +388,9 @@ function AppContent() {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current);
+      }
     };
   }, []);
 
@@ -324,10 +420,13 @@ function AppContent() {
       timestamp: new Date()
     };
 
-    setMessages([...messages, userMessage]);
-    setIsLoading(true);
+    setMessages(msgs => [...msgs, userMessage]);
+      setIsLoading(true);
+      let agentMessageId = '';
+      let unsubscribeStream: (() => void) | undefined;
+      stopStreamReveal();
 
-    try {
+      try {
       // Get active document
       const activeTab = tabs.find(t => t.id === activeTabId);
       
@@ -352,22 +451,46 @@ function AppContent() {
 
       console.log('Sending to agent:', context);
 
-      const response = await window.electronAPI.chat(message, context);
+      agentMessageId = (Date.now() + 1).toString();
+      const streamId = `stream_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      let hasStreamedContent = false;
+
+      const placeholderMessage: Message = {
+        id: agentMessageId,
+        role: 'agent',
+        content: '',
+        timestamp: new Date()
+      };
+
+      setMessages(msgs => [...msgs, placeholderMessage]);
+
+      if (window.electronAPI.chatStream && window.electronAPI.onChatStreamChunk) {
+        unsubscribeStream = window.electronAPI.onChatStreamChunk((payload) => {
+          if (payload.streamId !== streamId || !payload.chunk) return;
+          hasStreamedContent = true;
+          streamQueueRef.current += payload.chunk;
+          ensureStreamReveal(agentMessageId);
+        });
+      }
+
+      const response = window.electronAPI.chatStream
+        ? await window.electronAPI.chatStream(message, context, streamId)
+        : await window.electronAPI.chat(message, context);
       
       // Store thread ID for conversation continuity
       if (response.threadId) {
         setThreadId(response.threadId);
       }
       
-      const agentMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'agent',
-        content: response.response || "I'm here to help with your writing!",
-        timestamp: new Date(),
-        hasGeneratedText: !!response.generatedText
-      };
-
-      setMessages(msgs => [...msgs, agentMessage]);
+      setMessages(msgs => msgs.map(msg =>
+        msg.id === agentMessageId
+          ? {
+              ...msg,
+              content: hasStreamedContent ? msg.content : response.response || "I'm here to help with your writing!",
+              hasGeneratedText: !!response.generatedText
+            }
+          : msg
+      ));
 
       // If there's generated text, show it as a suggestion
       if (response.generatedText) {
@@ -377,14 +500,26 @@ function AppContent() {
 
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'agent',
-        content: "Sorry, I encountered an error. Please try again.",
-        timestamp: new Date()
-      };
-      setMessages(msgs => [...msgs, errorMessage]);
+      stopStreamReveal();
+      setMessages(msgs => {
+        if (agentMessageId && msgs.some(msg => msg.id === agentMessageId)) {
+          return msgs.map(msg =>
+            msg.id === agentMessageId
+              ? { ...msg, content: "Sorry, I encountered an error. Please try again." }
+              : msg
+          );
+        }
+
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'agent',
+          content: "Sorry, I encountered an error. Please try again.",
+          timestamp: new Date()
+        };
+        return [...msgs, errorMessage];
+      });
     } finally {
+      unsubscribeStream?.();
       setIsLoading(false);
     }
   };

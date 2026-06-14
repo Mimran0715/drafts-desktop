@@ -15,6 +15,14 @@ interface AgentChatProps {
   isLoading?: boolean;
 }
 
+function cleanChatOutput(content: string) {
+  return content
+    .replace(/^\s*\*\s+/gm, '- ')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/\*/g, '');
+}
+
 export default function AgentChat({ messages, onSend, isLoading }: AgentChatProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,12 +86,16 @@ export default function AgentChat({ messages, onSend, isLoading }: AgentChatProp
                 >
                   {message.role === 'user' ? 'You' : '✏️ Companion'}
                 </div>
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {message.role === 'agent' ? cleanChatOutput(message.content) : message.content}
+                </div>
               </div>
             </div>
           ))
         )}
         
+        {/* Thinking indicator disabled while streaming chat output is active.
+            Re-enable this block if you want the loading bubble back later.
         {isLoading && (
           <div className="flex justify-start">
             <div 
@@ -106,6 +118,7 @@ export default function AgentChat({ messages, onSend, isLoading }: AgentChatProp
             </div>
           </div>
         )}
+        */}
         
         <div ref={messagesEndRef} />
       </div>

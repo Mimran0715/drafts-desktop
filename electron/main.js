@@ -3,6 +3,7 @@ const path = require('path');
 const fsSync = require('fs');
 const fs = fsSync.promises;
 const mammoth = require('mammoth');
+const { Document, Packer, Paragraph, TextRun } = require('docx');
 
 function loadEnvFile(filePath) {
   if (!fsSync.existsSync(filePath)) return;
@@ -89,6 +90,41 @@ function textToHtml(text) {
   return paragraphs || '<p><br></p>';
 }
 
+function invalidDocxHtml(filename) {
+  return textToHtml(`⚠️ ${filename} is empty or not a valid .docx file yet.\n\nIf this is a new file, start writing and autosave will repair it as a real Word document. If it came from another app, open it in Word or Pages and re-save it as .docx.`);
+}
+
+function htmlToPlainText(content) {
+  return content
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .trim();
+}
+
+async function writeDocx(filePath, plainText) {
+  const lines = plainText.split(/\r?\n/);
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: lines.length > 0
+        ? lines.map(line => new Paragraph({
+            children: [new TextRun(line || ' ')],
+          }))
+        : [new Paragraph({ children: [new TextRun(' ')] })],
+    }],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  await fs.writeFile(filePath, buffer);
+}
+
 // IPC Handlers
 
 ipcMain.handle('select-project-folder', async () => {
@@ -123,36 +159,34 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
         
         try {
           const lowerFilename = filename.toLowerCase();
+          const stats = await fs.stat(filePath);
           
           if (lowerFilename.endsWith('.md') || lowerFilename.endsWith('.txt')) {
             const textContent = await fs.readFile(filePath, 'utf-8');
             content = textToHtml(textContent);
           } else if (lowerFilename.endsWith('.docx')) {
-            try {
-              // Use mammoth to convert to HTML instead of plain text
-              const result = await mammoth.convertToHtml({ path: filePath });
-              content = result.value;
-              
-              // Log any warnings from mammoth
-              if (result.messages.length > 0) {
-                console.log(`Mammoth warnings for ${filename}:`, result.messages);
-              }
-            } catch (docxError) {
-              console.error(`Error parsing .docx file ${filename}:`, docxError.message);
-              // If .docx parsing fails, try reading as plain text
+            if (stats.size === 0) {
+              console.warn(`Skipping empty .docx file ${filename}`);
+              content = invalidDocxHtml(filename);
+            } else {
               try {
-                const textContent = await fs.readFile(filePath, 'utf-8');
-                content = textToHtml(`⚠️ Warning: This .docx file appears to be corrupted or invalid.\n\nAttempting to display raw content:\n\n${textContent}`);
-              } catch (textError) {
-                content = textToHtml(`❌ Error: Could not read ${filename}\n\nThis file appears to be corrupted or not a valid .docx file.\n\nPlease try:\n1. Opening it in Microsoft Word and re-saving it\n2. Converting it to .txt format\n3. Creating a new document and copying the content`);
+                // Use mammoth to convert to HTML instead of plain text
+                const result = await mammoth.convertToHtml({ path: filePath });
+                content = result.value;
+                
+                // Log any warnings from mammoth
+                if (result.messages.length > 0) {
+                  console.log(`Mammoth warnings for ${filename}:`, result.messages);
+                }
+              } catch (docxError) {
+                console.error(`Error parsing .docx file ${filename}:`, docxError.message);
+                content = invalidDocxHtml(filename);
               }
             }
           } else if (lowerFilename.endsWith('.doc')) {
             content = textToHtml(`# ${filename}\n\nOld .doc format is not supported. Please convert to .docx or .txt format.\n\nYou can edit this file here and it will be saved as plain text.`);
           }
-          
-          const stats = await fs.stat(filePath);
-          
+
           return {
             name: filename,
             path: filePath,
@@ -177,20 +211,15 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
 
 ipcMain.handle('save-document', async (event, filePath, content) => {
   try {
-    // Convert HTML back to plain text for saving
-    // This strips all HTML tags
-    const plainText = content
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .trim();
-    
-    await fs.writeFile(filePath, plainText, 'utf-8');
+    const plainText = htmlToPlainText(content);
+    const lowerFilePath = filePath.toLowerCase();
+
+    if (lowerFilePath.endsWith('.docx')) {
+      await writeDocx(filePath, plainText);
+    } else {
+      await fs.writeFile(filePath, plainText, 'utf-8');
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Error saving document:', error);
@@ -205,7 +234,11 @@ ipcMain.handle('create-document', async (event, folderPath, filename) => {
     }
     
     const filePath = path.join(folderPath, filename);
-    await fs.writeFile(filePath, '', 'utf-8');
+    if (filename.toLowerCase().endsWith('.docx')) {
+      await writeDocx(filePath, '');
+    } else {
+      await fs.writeFile(filePath, '', 'utf-8');
+    }
     
     return {
       name: filename,
@@ -241,12 +274,66 @@ ipcMain.handle('chat', async (event, message, context) => {
       userId,
       projectPath,
       activeDocumentPath,
-      threadId
+      threadId,
+      liveContent: context.liveContent || null
     });
     
     return result;
   } catch (error) {
     console.error('Error in chat:', error);
+    
+    if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
+      return {
+        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. Try running 'ollama pull llama3.1' to download the model",
+        timestamp: new Date(),
+      };
+    }
+    
+    return {
+      response: `Error: ${error.message || 'Failed to get AI response.'}`,
+      timestamp: new Date(),
+    };
+  }
+});
+
+ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
+  try {
+    console.log('Chat message:', message);
+    
+    const userId = context.userId || 'default-user';
+    const projectPath = context.projectPath || '';
+    const activeDocumentPath = context.currentDocument?.filePath || context.currentDocument?.path || '';
+    const threadId = context.threadId || null;
+    const safeStreamId = streamId || `stream_${Date.now()}`;
+    
+    console.log('Agent context:', {
+      userId,
+      projectPath,
+      activeDocumentPath,
+      threadId,
+      streamId: safeStreamId
+    });
+    
+    const result = await runAgent({
+      message,
+      userId,
+      projectPath,
+      activeDocumentPath,
+      threadId,
+      liveContent: context.liveContent || null,
+      onToken: (chunk) => {
+        if (chunk) {
+          event.sender.send('chat-stream-chunk', {
+            streamId: safeStreamId,
+            chunk
+          });
+        }
+      }
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error in streaming chat:', error);
     
     if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
       return {

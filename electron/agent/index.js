@@ -6,6 +6,14 @@ const { runAgentGraph } = require('./graph');
 const { createInitialState } = require('./state');
 const db = require('../database.js');
 
+function cleanChatOutput(content) {
+  return content
+    .replace(/^\s*\*\s+/gm, '- ')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/\*/g, '');
+}
+
 /**
  * Run the multi-node agent
  * @param {Object} params - Agent parameters
@@ -15,10 +23,11 @@ const db = require('../database.js');
  * @param {string} params.activeDocumentPath - Path to active document
  * @param {string} [params.threadId] - Thread ID for conversation continuity
  * @param {Object} [params.liveContent] - Live content from editor {name, content, path}
+ * @param {Function} [params.onToken] - Optional callback for streamed chat output chunks
  * @returns {Promise<Object>} Agent response
  */
 async function runAgent(params) {
-  const { message, userId, projectPath, activeDocumentPath, threadId, liveContent } = params;
+  const { message, userId, projectPath, activeDocumentPath, threadId, liveContent, onToken } = params;
   
   // Generate thread ID if not provided
   const thread = threadId || `thread_${Date.now()}`;
@@ -42,7 +51,8 @@ async function runAgent(params) {
     const initialState = {
       ...createInitialState(message, userId, projectPath, activeDocumentPath),
       messages: [new HumanMessage(message)],
-      liveContent: liveContent // Pass live content to tools
+      liveContent: liveContent, // Pass live content to tools
+      streamWriter: typeof onToken === 'function' ? onToken : null
     };
     
     // Run the agent graph
@@ -52,9 +62,10 @@ async function runAgent(params) {
     
     // Extract final response
     const lastMessage = result.messages[result.messages.length - 1];
-    const responseContent = typeof lastMessage.content === 'string'
+    const rawResponseContent = typeof lastMessage.content === 'string'
       ? lastMessage.content
       : String(lastMessage.content);
+    const responseContent = cleanChatOutput(rawResponseContent);
     
     // Save agent response to database
     db.saveMessage(projectPath, thread, 'agent', responseContent);
@@ -82,7 +93,7 @@ async function runAgent(params) {
     
     // Return error response
     return {
-      response: `I encountered an error: ${error.message}. Please try again.`,
+      response: cleanChatOutput(`I encountered an error: ${error.message}. Please try again.`),
       threadId: thread,
       error: error.message,
       timestamp: new Date()

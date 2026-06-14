@@ -13,6 +13,102 @@ const model = new ChatOllama({
   temperature: 0.7,
 });
 
+function chunkContentToText(content) {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map(part => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && typeof part.text === 'string') return part.text;
+        return '';
+      })
+      .join('');
+  }
+  return content ? String(content) : '';
+}
+
+async function invokeModel(messages, options = {}) {
+  if (!options.onToken) {
+    const response = await model.invoke(messages);
+    return chunkContentToText(response.content);
+  }
+
+  let content = '';
+  const stream = await model.stream(messages);
+
+  for await (const chunk of stream) {
+    const text = chunkContentToText(chunk.content);
+    if (!text) continue;
+    content += text;
+    options.onToken(text);
+  }
+
+  return content;
+}
+
+function classifyIntentFromText(messageContent) {
+  const text = messageContent.toLowerCase();
+
+  if (/\b(analy[sz]e|analysis|feedback|review|critique|thoughts|draft so far)\b/.test(text)) {
+    return 'analyze: The user wants feedback or analysis of their writing.';
+  }
+
+  if (/\b(find|search|look up|locate|where did|what did|who is|recall)\b/.test(text)) {
+    return 'search: The user wants to find or recall information from their documents.';
+  }
+
+  if (/\b(continue|write|generate|expand|add|draft|compose|help me write)\b/.test(text)) {
+    return 'generate: The user wants to write, continue, or expand content.';
+  }
+
+  if (text.includes('?') || /\b(question|explain|how|why|what|should i|can i)\b/.test(text)) {
+    return 'question: The user has a general question or needs clarification.';
+  }
+
+  return 'conversational: Just chatting, no specific tool needed.';
+}
+
+function isAmbiguousConversationalIntent(intent, messageContent) {
+  const text = messageContent.trim().toLowerCase();
+  return intent.startsWith('conversational') && !/^(hi|hello|hey|yo|thanks|thank you|ok|okay|cool|nice)[.!? ]*$/.test(text);
+}
+
+function formatToolFallbackResponse(state, errorMessage) {
+  const info = state.gatheredInfo || {};
+
+  if (info.generated?.success) {
+    return "I wrote a continuation for you, but had trouble generating the chat wrapper. You can review the inserted suggestion in the editor.";
+  }
+
+  if (info.analysis) {
+    if (info.analysis.success) {
+      return `I was able to analyze "${info.analysis.documentName}" (${info.analysis.wordCount} words), but had trouble polishing the final reply.\n\n${info.analysis.analysis}`;
+    }
+
+    return `I tried to analyze the active document, but couldn't finish: ${info.analysis.message}`;
+  }
+
+  if (info.searchResults) {
+    const results = info.searchResults;
+    if (!results.found || results.results.length === 0) {
+      return "I searched your project documents, but I didn't find a matching passage.";
+    }
+
+    const snippets = results.results.map(result => {
+      const matches = result.matches.map(match => `- ${match.context}`).join('\n');
+      return `From "${result.documentName}":\n${matches}`;
+    }).join('\n\n');
+
+    return `I found these relevant notes:\n\n${snippets}`;
+  }
+
+  if (info.error) {
+    return `I hit an error while working on that: ${info.error}`;
+  }
+
+  return `I had trouble reaching the local Ollama model for the final response: ${errorMessage}. Please make sure Ollama is running and that the "${MODEL}" model is available.`;
+}
+
 /**
  * UNDERSTAND NODE
  * Analyzes user's message to determine intent and what they need
@@ -40,6 +136,15 @@ Respond with ONLY the category and a brief 1-sentence explanation.
 Format: CATEGORY: explanation`;
 
   console.log('🧠 Understanding user request...');
+
+  const heuristicIntent = classifyIntentFromText(messageContent);
+  if (!isAmbiguousConversationalIntent(heuristicIntent, messageContent)) {
+    console.log('💡 User intent (heuristic):', heuristicIntent);
+    return {
+      userIntent: heuristicIntent,
+      iterationCount: state.iterationCount + 1
+    };
+  }
   
   try {
     const response = await model.invoke([
@@ -59,8 +164,11 @@ Format: CATEGORY: explanation`;
     };
   } catch (error) {
     console.error('Error in understand node:', error);
+    const fallbackIntent = classifyIntentFromText(messageContent);
+    console.log('💡 User intent (fallback):', fallbackIntent);
+
     return {
-      userIntent: 'conversational: Could not determine intent',
+      userIntent: fallbackIntent,
       iterationCount: state.iterationCount + 1
     };
   }
@@ -115,7 +223,8 @@ const executeNode = traceable(async function executeNode(state) {
         const analysis = await analyzeDraft(
           state.activeDocumentPath,
           state.projectPath,
-          state.liveContent
+          state.liveContent,
+          { onToken: state.streamWriter }
         );
         gatheredInfo.analysis = analysis;
       } else {
@@ -143,7 +252,7 @@ const executeNode = traceable(async function executeNode(state) {
     if (intent.includes('question') && !gatheredInfo.searchResults && !gatheredInfo.analysis && !gatheredInfo.generated) {
       console.log('❓ User needs clarification...');
       
-      const clarification = await askQuestion(messageContent);
+      const clarification = await askQuestion(messageContent, { onToken: state.streamWriter });
       gatheredInfo.clarification = clarification;
     }
     
@@ -192,10 +301,65 @@ const respondNode = traceable(async function respondNode(state) {
     
     // Return a brief explanation + the generated text
     const response = `I'll continue your story from where you left off. Here's what I've written:`;
+    if (state.streamWriter) {
+      state.streamWriter(response);
+    }
     
     return {
       messages: [new AIMessage(response)],
       generatedText: gen.generated // This will be sent separately to the editor
+    };
+  }
+
+  if (state.gatheredInfo.analysis) {
+    const analysis = state.gatheredInfo.analysis;
+
+    if (analysis.success) {
+      const response = `Here's my read on "${analysis.documentName}" (${analysis.wordCount} words):\n\n${analysis.analysis}`;
+
+      return {
+        messages: [new AIMessage(response)]
+      };
+    }
+
+    return {
+      messages: [new AIMessage(`I tried to analyze the active document, but couldn't finish: ${analysis.message}`)]
+    };
+  }
+
+  if (state.gatheredInfo.searchResults) {
+    const sr = state.gatheredInfo.searchResults;
+
+    if (!sr.found || sr.results.length === 0) {
+      const response = "I searched your project documents, but I didn't find a matching passage.";
+      if (state.streamWriter) {
+        state.streamWriter(response);
+      }
+
+      return {
+        messages: [new AIMessage(response)]
+      };
+    }
+
+    const snippets = sr.results.map(result => {
+      const matches = result.matches.map(match => `- ${match.context}`).join('\n');
+      return `From "${result.documentName}":\n${matches}`;
+    }).join('\n\n');
+    const response = `I found these relevant notes:\n\n${snippets}`;
+    if (state.streamWriter) {
+      state.streamWriter(response);
+    }
+
+    return {
+      messages: [new AIMessage(response)]
+    };
+  }
+
+  if (state.gatheredInfo.clarification) {
+    const response = state.gatheredInfo.clarification.question || "Could you provide more details about what you'd like help with?";
+
+    return {
+      messages: [new AIMessage(response)]
     };
   }
   
@@ -263,14 +427,10 @@ If no relevant info was found, be honest but helpful.`;
   console.log('💬 Generating final response...');
   
   try {
-    const response = await model.invoke([
+    const responseText = await invokeModel([
       new SystemMessage(systemPrompt),
       new HumanMessage("Provide your response now.")
-    ]);
-    
-    const responseText = typeof response.content === 'string' 
-      ? response.content 
-      : String(response.content);
+    ], { onToken: state.streamWriter });
     
     console.log('✅ Response generated');
     
@@ -280,7 +440,7 @@ If no relevant info was found, be honest but helpful.`;
   } catch (error) {
     console.error('Error in respond node:', error);
     return {
-      messages: [new AIMessage(`I encountered an error: ${error.message}. Please try again.`)]
+      messages: [new AIMessage(formatToolFallbackResponse(state, error.message))]
     };
   }
 }, {
