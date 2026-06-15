@@ -35,6 +35,7 @@ function loadEnvFile(filePath) {
 loadEnvFile(path.join(__dirname, '../.env'));
 
 const { runAgent } = require('./agent/index.js');
+const { getChromaStatus } = require('./agent/vectorStore.js');
 const db = require('./database.js');
 
 let mainWindow;
@@ -373,6 +374,10 @@ ipcMain.handle('get-ollama-models', async () => {
     console.error('Error loading Ollama models:', error.message);
     return SUPPORTED_OLLAMA_MODELS;
   }
+});
+
+ipcMain.handle('get-chroma-status', async () => {
+  return getChromaStatus();
 });
 
 ipcMain.handle('get-recent-projects', async () => {

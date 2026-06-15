@@ -251,7 +251,8 @@ const executeNode = traceable(async function executeNode(state) {
       gatheredInfo.ragResults = await searchContext(
         messageContent,
         state.projectPath,
-        state.liveContent
+        state.liveContent,
+        { useVector: true }
       );
     }
 
@@ -271,7 +272,8 @@ const executeNode = traceable(async function executeNode(state) {
       const searchResults = gatheredInfo.ragResults || await searchContext(
           searchQuery,
           state.projectPath,
-          state.liveContent
+          state.liveContent,
+          { useVector: !!state.ragEnabled }
         );
       
       gatheredInfo.searchResults = searchResults;

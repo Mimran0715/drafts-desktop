@@ -19,6 +19,7 @@ declare global {
       chatStream?: (message: string, context: any, streamId: string) => Promise<any>;
       onChatStreamChunk?: (callback: (payload: { streamId: string; chunk: string }) => void) => () => void;
       getOllamaModels?: () => Promise<string[]>;
+      getChromaStatus?: () => Promise<{ available: boolean; host: string; port: number; version?: string | null; error?: string }>;
       getRecentProjects: () => Promise<any[]>;
       addRecentProject: (projectId: string, name: string, projectPath: string) => Promise<any>;
       getConversationHistory: (threadId: string) => Promise<any[]>;
@@ -76,6 +77,7 @@ function AppContent() {
   const [ragEnabled, setRagEnabled] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
+  const [chromaStatus, setChromaStatus] = useState<{ available: boolean; host: string; port: number; version?: string | null; error?: string } | null>(null);
   
   // Autosave refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -190,6 +192,38 @@ function AppContent() {
 
     return () => {
       isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const refreshChromaStatus = async () => {
+      if (!window.electronAPI.getChromaStatus) return;
+
+      try {
+        const status = await window.electronAPI.getChromaStatus();
+        if (!isCancelled) {
+          setChromaStatus(status);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setChromaStatus({
+            available: false,
+            host: '127.0.0.1',
+            port: 8000,
+            error: error instanceof Error ? error.message : 'Unable to check Chroma',
+          });
+        }
+      }
+    };
+
+    refreshChromaStatus();
+    const interval = setInterval(refreshChromaStatus, 30000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -645,6 +679,7 @@ function AppContent() {
             selectedModel={selectedModel}
             availableModels={availableModels}
             onSelectedModelChange={handleSelectedModelChange}
+            chromaStatus={chromaStatus}
           />
         }
       />

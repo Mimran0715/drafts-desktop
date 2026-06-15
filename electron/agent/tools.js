@@ -6,6 +6,7 @@ const path = require('path');
 const mammoth = require('mammoth');
 const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
+const { searchWithChroma } = require('./vectorStore');
 
 const MODEL = "llama3.1";
 const modelCache = new Map();
@@ -162,31 +163,7 @@ const loadDocument = traceable(async function loadDocument(documentPath) {
  * @param {Object} [liveContent] - Optional live content from editor
  * @returns {Promise<Object>} Search results with relevant excerpts
  */
-const searchContext = traceable(async function searchContext(query, projectPath, liveContent = null) {
-  console.log(`🔍 Searching for: "${query}" in project: ${projectPath}`);
-  
-  const documents = await loadProjectDocuments(projectPath);
-  
-  // Add live content if provided
-  if (liveContent && liveContent.content) {
-    documents.push({
-      name: liveContent.name || 'Current Draft',
-      path: liveContent.path || 'active-document',
-      content: liveContent.content,
-      modified: new Date(),
-      isLive: true
-    });
-    console.log('📝 Added live content from editor');
-  }
-  
-  if (documents.length === 0) {
-    return {
-      found: false,
-      message: "No documents found in project",
-      results: []
-    };
-  }
-  
+function keywordSearchDocuments(query, documents) {
   // Simple keyword search across all documents
   const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
   const results = [];
@@ -240,8 +217,46 @@ const searchContext = traceable(async function searchContext(query, projectPath,
     found: results.length > 0,
     query,
     resultCount: results.length,
+    retrievalMode: 'keyword',
     results: results.slice(0, 3) // Return top 3 most relevant documents
   };
+}
+
+const searchContext = traceable(async function searchContext(query, projectPath, liveContent = null, options = {}) {
+  console.log(`🔍 Searching for: "${query}" in project: ${projectPath}`);
+  
+  const documents = await loadProjectDocuments(projectPath);
+  
+  // Add live content if provided
+  if (liveContent && liveContent.content) {
+    documents.push({
+      name: liveContent.name || 'Current Draft',
+      path: liveContent.path || 'active-document',
+      content: liveContent.content,
+      modified: new Date(),
+      isLive: true
+    });
+    console.log('📝 Added live content from editor');
+  }
+  
+  if (documents.length === 0) {
+    return {
+      found: false,
+      message: "No documents found in project",
+      results: []
+    };
+  }
+
+  if (options.useVector) {
+    try {
+      console.log('🧭 Running Chroma vector retrieval...');
+      return await searchWithChroma(query, projectPath, documents, options);
+    } catch (error) {
+      console.warn('Chroma retrieval unavailable, falling back to keyword search:', error.message);
+    }
+  }
+
+  return keywordSearchDocuments(query, documents);
 }, {
   name: 'search_context',
   run_type: 'tool',

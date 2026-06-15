@@ -19,6 +19,7 @@ interface AgentChatProps {
   selectedModel: string;
   availableModels: string[];
   onSelectedModelChange: (modelName: string) => void;
+  chromaStatus: { available: boolean; host: string; port: number; version?: string | null; error?: string } | null;
 }
 
 function cleanChatOutput(content: string) {
@@ -37,7 +38,8 @@ export default function AgentChat({
   onRagEnabledChange,
   selectedModel,
   availableModels,
-  onSelectedModelChange
+  onSelectedModelChange,
+  chromaStatus
 }: AgentChatProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,16 @@ export default function AgentChat({
               disabled={isLoading}
             />
             <span>Use project context</span>
+            <span
+              title={chromaStatus?.available
+                ? `Chroma available on ${chromaStatus.host}:${chromaStatus.port}`
+                : chromaStatus?.error || 'Checking Chroma status'}
+              style={{
+                color: chromaStatus?.available ? 'var(--btn-primary-bg)' : 'var(--sidebar-text-muted)'
+              }}
+            >
+              {chromaStatus?.available ? 'Vector ready' : 'Keyword fallback'}
+            </span>
           </label>
           <select
             value={selectedModel}

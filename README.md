@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/ff60d5f7-3bdc-4873-8057-094a569d2d8c
 - **Themes** - Various themes (Letter, Rose, Ocean, and more)
 - **Export Options** - Save as TXT, DOCX, or PDF
 - **Streaming Chat** - Companion responses stream into chat with a simple loading state
-- **Project Context Toggle** - Optional keyword-based RAG retrieves relevant snippets from project files
+- **Project Context Toggle** - Optional RAG retrieves relevant snippets from project files, using Chroma vector search when available
 - **Ollama Model Picker** - Select supported local models, currently `llama3.1` or `llama3.2`
 - **Editor Suggestions** - Generated continuations appear in the editor with Accept/Reject controls
 - **Session Restore** - Reopens the last project automatically between app launches
@@ -23,6 +23,7 @@ Built with Electron, React, TypeScript, LangChain, and LangGraph.
 
 - Uses a simple LangGraph flow: understand → execute tools → respond.
 - Uses heuristic routing first for common requests like analyze, continue, search, and review.
+- Uses a small Chroma-backed vector index for project context when a local Chroma server is running, with keyword search as a fallback.
 - Supports `.md`, `.txt`, and `.docx` project files, with safer handling for empty or invalid `.docx` files.
 - Keeps generated draft prose separate from chat commentary so only writing text is inserted into the editor.
 - Stores preferences such as last project, RAG toggle, and selected model in the local SQLite database.
