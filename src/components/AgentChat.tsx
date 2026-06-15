@@ -7,6 +7,7 @@ interface Message {
   role: 'user' | 'agent';
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
 interface AgentChatProps {
@@ -100,9 +101,20 @@ export default function AgentChat({
                 >
                   {message.role === 'user' ? 'You' : '✏️ Companion'}
                 </div>
-                <div className="text-sm whitespace-pre-wrap">
-                  {message.role === 'agent' ? cleanChatOutput(message.content) : message.content}
-                </div>
+                {message.role === 'agent' && message.isStreaming && !message.content ? (
+                  <div 
+                    className="flex items-center gap-1 text-sm"
+                    style={{ color: 'var(--sidebar-text-muted)' }}
+                  >
+                    <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
+                    <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
+                    <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
+                  </div>
+                ) : (
+                  <div className="text-sm whitespace-pre-wrap">
+                    {message.role === 'agent' ? cleanChatOutput(message.content) : message.content}
+                  </div>
+                )}
               </div>
             </div>
           ))

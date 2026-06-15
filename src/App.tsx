@@ -49,6 +49,7 @@ interface Message {
   content: string;
   timestamp: Date;
   hasGeneratedText?: boolean;
+  isStreaming?: boolean;
 }
 
 const STREAM_CHARS_PER_TICK = 2;
@@ -124,7 +125,7 @@ function AppContent() {
       if (nextChunk) {
         setMessages(msgs => msgs.map(msg =>
           msg.id === activeMessageId
-            ? { ...msg, content: msg.content + nextChunk }
+            ? { ...msg, content: msg.content + nextChunk, isStreaming: false }
             : msg
         ));
       }
@@ -507,7 +508,8 @@ function AppContent() {
         id: agentMessageId,
         role: 'agent',
         content: '',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isStreaming: true
       };
 
       setMessages(msgs => [...msgs, placeholderMessage]);
@@ -535,7 +537,8 @@ function AppContent() {
           ? {
               ...msg,
               content: hasStreamedContent ? msg.content : response.response || "I'm here to help with your writing!",
-              hasGeneratedText: !!response.generatedText
+              hasGeneratedText: !!response.generatedText,
+              isStreaming: false
             }
           : msg
       ));
@@ -553,7 +556,7 @@ function AppContent() {
         if (agentMessageId && msgs.some(msg => msg.id === agentMessageId)) {
           return msgs.map(msg =>
             msg.id === agentMessageId
-              ? { ...msg, content: "Sorry, I encountered an error. Please try again." }
+              ? { ...msg, content: "Sorry, I encountered an error. Please try again.", isStreaming: false }
               : msg
           );
         }

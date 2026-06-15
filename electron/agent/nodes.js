@@ -134,6 +134,34 @@ function formatRagContext(searchResults) {
   }).join('\n\n');
 }
 
+function splitGeneratedWriting(generatedText = '') {
+  const text = String(generatedText).trim();
+  const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
+
+  if (separatorMatch?.index !== undefined) {
+    const separatorStart = separatorMatch.index;
+    const separatorEnd = separatorStart + separatorMatch[0].length;
+
+    return {
+      writing: text.slice(0, separatorStart).trim(),
+      note: text.slice(separatorEnd).trim()
+    };
+  }
+
+  const commentaryMatch = text.match(/\n{2,}(?=(How is that|How does that|Let me know|Would you like|I can also|If you'd like|If you want|Does that|Hope this)\b)/i);
+  if (commentaryMatch?.index !== undefined) {
+    return {
+      writing: text.slice(0, commentaryMatch.index).trim(),
+      note: text.slice(commentaryMatch.index).trim()
+    };
+  }
+
+  return {
+    writing: text,
+    note: ''
+  };
+}
+
 /**
  * UNDERSTAND NODE
  * Analyzes user's message to determine intent and what they need
@@ -341,18 +369,21 @@ const respondNode = traceable(async function respondNode(state) {
   // Check if we have generated text - if so, return it directly with minimal wrapper
   if (state.gatheredInfo.generated && state.gatheredInfo.generated.success) {
     const gen = state.gatheredInfo.generated;
+    const { writing, note } = splitGeneratedWriting(gen.generated);
     
     console.log('✅ Returning generated text for editor insertion');
     
     // Return a brief explanation + the generated text
-    const response = `I'll continue your story from where you left off. The suggested text is ready above the editor.`;
+    const response = note
+      ? `I'll continue your story from where you left off. The suggested text is ready above the editor.\n\n${note}`
+      : `I'll continue your story from where you left off. The suggested text is ready above the editor.`;
     if (state.streamWriter) {
       state.streamWriter(response);
     }
     
     return {
       messages: [new AIMessage(response)],
-      generatedText: gen.generated // This will be sent separately to the editor
+      generatedText: writing // This will be sent separately to the editor
     };
   }
 

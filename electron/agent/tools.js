@@ -402,7 +402,14 @@ const generateText = traceable(async function generateText(userRequest, projectP
 
 ${contextString}
 
-Generate helpful, relevant content that matches the style and context of the existing work.`;
+Generate helpful, relevant content that matches the style and context of the existing work.
+
+Output format is required:
+1. First, write ONLY the draft/story text that should be inserted into the editor.
+2. Then write a standalone separator line containing exactly three hyphens: ---
+3. After the separator, write any brief note, explanation, or question for the user.
+
+Do not put commentary, explanation, greetings, or questions before the separator. The text before --- must be ready to insert directly into the draft.`;
 
   try {
     const generated = await invokeModel([
