@@ -37,6 +37,37 @@ function chunkContentToText(content) {
   return content ? String(content) : '';
 }
 
+function splitGeneratedWriting(generatedText = '') {
+  const text = String(generatedText).trim();
+  const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
+
+  if (separatorMatch?.index !== undefined) {
+    const separatorStart = separatorMatch.index;
+    return text.slice(0, separatorStart).trim();
+  }
+
+  return text;
+}
+
+function normalizeSuggestionText(text = '') {
+  return String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function isDuplicateSuggestion(generatedText, suggestionContext) {
+  if (!suggestionContext) return false;
+
+  const generatedWriting = normalizeSuggestionText(splitGeneratedWriting(generatedText));
+  if (!generatedWriting) return false;
+
+  const previousSuggestions = [
+    suggestionContext.currentPending,
+    ...(Array.isArray(suggestionContext.recentSuggestions) ? suggestionContext.recentSuggestions : []),
+    ...(Array.isArray(suggestionContext.rejectedSuggestions) ? suggestionContext.rejectedSuggestions : [])
+  ];
+
+  return previousSuggestions.some(suggestion => normalizeSuggestionText(suggestion) === generatedWriting);
+}
+
 async function invokeModel(messages, options = {}) {
   const model = getModel(options.modelName);
 
@@ -250,12 +281,15 @@ const searchContext = traceable(async function searchContext(query, projectPath,
   if (options.useVector) {
     try {
       console.log('🧭 Running Chroma vector retrieval...');
-      return await searchWithChroma(query, projectPath, documents, options);
+      const results = await searchWithChroma(query, projectPath, documents, options);
+      console.log(`✅ Chroma retrieval complete (${results.embeddingMode || 'unknown'} embeddings, ${results.resultCount} docs)`);
+      return results;
     } catch (error) {
       console.warn('Chroma retrieval unavailable, falling back to keyword search:', error.message);
     }
   }
 
+  console.log('🔤 Running keyword retrieval...');
   return keywordSearchDocuments(query, documents);
 }, {
   name: 'search_context',
@@ -412,12 +446,34 @@ const generateText = traceable(async function generateText(userRequest, projectP
   if (ragContext) {
     contextString += `\nRetrieved project context:\n${ragContext}\n`;
   }
+
+  const suggestionContext = liveContent?.suggestionContext;
+  if (suggestionContext) {
+    if (suggestionContext.currentPending) {
+      contextString += `\nCurrent pending suggestion that is already visible in the editor:\n${suggestionContext.currentPending}\n`;
+    }
+
+    if (Array.isArray(suggestionContext.recentSuggestions) && suggestionContext.recentSuggestions.length > 0) {
+      contextString += '\nRecent generated suggestions. Do not repeat or closely paraphrase these:\n';
+      suggestionContext.recentSuggestions.forEach((suggestion, index) => {
+        contextString += `\n--- Recent suggestion ${index + 1} ---\n${suggestion}\n`;
+      });
+    }
+
+    if (Array.isArray(suggestionContext.rejectedSuggestions) && suggestionContext.rejectedSuggestions.length > 0) {
+      contextString += '\nRejected suggestions. Treat these as examples of what the user did not want:\n';
+      suggestionContext.rejectedSuggestions.forEach((suggestion, index) => {
+        contextString += `\n--- Rejected suggestion ${index + 1} ---\n${suggestion}\n`;
+      });
+    }
+  }
   
   const prompt = `Based on the following context, help with this request: "${userRequest}"
 
 ${contextString}
 
 Generate helpful, relevant content that matches the style and context of the existing work.
+If there is a current pending suggestion, recent suggestion, or rejected suggestion in the context, create a meaningfully different alternative. Do not repeat the same opening, same events, or same phrasing. If the user is responding after rejecting a suggestion, use their feedback as revision direction and produce an altered suggestion.
 
 Output format is required:
 1. First, write ONLY the draft/story text that should be inserted into the editor.
@@ -427,10 +483,21 @@ Output format is required:
 Do not put commentary, explanation, greetings, or questions before the separator. The text before --- must be ready to insert directly into the draft.`;
 
   try {
-    const generated = await invokeModel([
+    let generated = await invokeModel([
       { role: 'system', content: 'You are a creative writing assistant helping to generate and expand content.' },
       { role: 'user', content: prompt }
     ], options);
+
+    if (isDuplicateSuggestion(generated, suggestionContext)) {
+      console.log('🔁 Model repeated a previous suggestion; requesting an alternate');
+      generated = await invokeModel([
+        { role: 'system', content: 'You are a creative writing assistant helping to generate and expand content.' },
+        {
+          role: 'user',
+          content: `${prompt}\n\nThe previous response matched a suggestion the user has already seen or rejected. Generate a new alternative with a different opening, different events, and different phrasing while still fitting the draft.`
+        }
+      ], options);
+    }
     
     return {
       success: true,

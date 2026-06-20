@@ -67,7 +67,7 @@ function classifyIntentFromText(messageContent) {
     return 'search: The user wants to find or recall information from their documents.';
   }
 
-  if (/\b(continue|write|generate|expand|add|draft|compose|help me write)\b/.test(text)) {
+  if (/\b(continue|write|generate|expand|add|draft|compose|help me write|revise|rewrite|alter|change|try again|different|instead|shorter|longer)\b/.test(text) || /^(more|less)\b/.test(text)) {
     return 'generate: The user wants to write, continue, or expand content.';
   }
 

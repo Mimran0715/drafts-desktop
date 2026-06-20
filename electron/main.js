@@ -36,6 +36,7 @@ loadEnvFile(path.join(__dirname, '../.env'));
 
 const { runAgent } = require('./agent/index.js');
 const { getChromaStatus } = require('./agent/vectorStore.js');
+const { startChromaServer, stopChromaServer } = require('./agent/chromaServer.js');
 const db = require('./database.js');
 
 let mainWindow;
@@ -61,10 +62,30 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   db.getDatabase();
   console.log('Database initialized');
+
+  try {
+    const chromaResult = await startChromaServer(app);
+    if (chromaResult.started) {
+      console.log('Chroma vector store ready');
+    } else if (chromaResult.alreadyRunning) {
+      console.log('Using existing Chroma server');
+    } else if (chromaResult.reason === 'auto-start-disabled') {
+      console.log('Expecting an external Chroma server');
+    } else if (chromaResult.error) {
+      console.warn(`Chroma unavailable (${chromaResult.error}); keyword search fallback will be used`);
+    }
+  } catch (error) {
+    console.warn('Failed to start Chroma server:', error.message);
+  }
+
   createWindow();
+});
+
+app.on('before-quit', () => {
+  stopChromaServer();
 });
 
 app.on('window-all-closed', () => {

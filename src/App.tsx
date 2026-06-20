@@ -19,7 +19,16 @@ declare global {
       chatStream?: (message: string, context: any, streamId: string) => Promise<any>;
       onChatStreamChunk?: (callback: (payload: { streamId: string; chunk: string }) => void) => () => void;
       getOllamaModels?: () => Promise<string[]>;
-      getChromaStatus?: () => Promise<{ available: boolean; host: string; port: number; version?: string | null; error?: string }>;
+      getChromaStatus?: () => Promise<{
+        available: boolean;
+        host: string;
+        port: number;
+        version?: string | null;
+        error?: string;
+        embeddingModel?: string;
+        embeddingMode?: string;
+        semanticSearch?: boolean;
+      }>;
       getRecentProjects: () => Promise<any[]>;
       addRecentProject: (projectId: string, name: string, projectPath: string) => Promise<any>;
       getConversationHistory: (threadId: string) => Promise<any[]>;
@@ -53,6 +62,13 @@ interface Message {
   isStreaming?: boolean;
 }
 
+interface SuggestionContext {
+  currentPending?: string | null;
+  recentSuggestions: string[];
+  rejectedSuggestions: string[];
+  lastRejected?: string | null;
+}
+
 const STREAM_CHARS_PER_TICK = 2;
 const STREAM_TICK_MS = 45;
 const LAST_PROJECT_KEY = 'lastProject';
@@ -77,7 +93,16 @@ function AppContent() {
   const [ragEnabled, setRagEnabled] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
-  const [chromaStatus, setChromaStatus] = useState<{ available: boolean; host: string; port: number; version?: string | null; error?: string } | null>(null);
+  const [chromaStatus, setChromaStatus] = useState<{
+    available: boolean;
+    host: string;
+    port: number;
+    version?: string | null;
+    error?: string;
+    embeddingModel?: string;
+    embeddingMode?: string;
+    semanticSearch?: boolean;
+  } | null>(null);
   
   // Autosave refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,6 +110,27 @@ function AppContent() {
   const editorRef = useRef<RichEditorHandle>(null);
   const streamQueueRef = useRef('');
   const streamIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recentSuggestionsRef = useRef<string[]>([]);
+  const rejectedSuggestionsRef = useRef<string[]>([]);
+  const lastRejectedSuggestionRef = useRef<string | null>(null);
+
+  const rememberSuggestion = (suggestion: string, bucket: 'recent' | 'rejected') => {
+    const normalizedSuggestion = suggestion.trim();
+    if (!normalizedSuggestion) return;
+
+    const targetRef = bucket === 'recent' ? recentSuggestionsRef : rejectedSuggestionsRef;
+    targetRef.current = [
+      normalizedSuggestion,
+      ...targetRef.current.filter(item => item.trim() !== normalizedSuggestion)
+    ].slice(0, 5);
+  };
+
+  const buildSuggestionContext = (): SuggestionContext => ({
+    currentPending: pendingSuggestion,
+    recentSuggestions: recentSuggestionsRef.current,
+    rejectedSuggestions: rejectedSuggestionsRef.current,
+    lastRejected: lastRejectedSuggestionRef.current
+  });
   const streamMessageIdRef = useRef<string | null>(null);
 
   const rememberProject = async (project: Project) => {
@@ -210,7 +256,7 @@ function AppContent() {
         if (!isCancelled) {
           setChromaStatus({
             available: false,
-            host: '127.0.0.1',
+            host: 'localhost',
             port: 8000,
             error: error instanceof Error ? error.message : 'Unable to check Chroma',
           });
@@ -515,7 +561,8 @@ function AppContent() {
       const liveContent = activeTab && editorRef.current ? {
         name: activeTab.title,
         content: editorRef.current.getText(), // Get plain text for agent
-        path: activeTab.filePath || activeTab.id
+        path: activeTab.filePath || activeTab.id,
+        suggestionContext: buildSuggestionContext()
       } : null;
 
       // Prepare context
@@ -580,6 +627,8 @@ function AppContent() {
       // If there's generated text, show it as a suggestion
       if (response.generatedText) {
         console.log('📝 Received generated text from agent');
+        rememberSuggestion(response.generatedText, 'recent');
+        lastRejectedSuggestionRef.current = null;
         setPendingSuggestion(response.generatedText);
       }
 
@@ -631,12 +680,25 @@ function AppContent() {
     handleContentChange(activeTab.id, newContent);
 
     // Clear suggestion
+    lastRejectedSuggestionRef.current = null;
     setPendingSuggestion(null);
   };
 
   const handleRejectSuggestion = () => {
+    if (!pendingSuggestion) return;
+
     console.log('❌ Rejecting suggestion');
+    rememberSuggestion(pendingSuggestion, 'rejected');
+    lastRejectedSuggestionRef.current = pendingSuggestion;
     setPendingSuggestion(null);
+
+    const feedbackPrompt: Message = {
+      id: Date.now().toString(),
+      role: 'agent',
+      content: "What didn't work about that suggestion? Tell me what to change and I'll draft an alternate version.",
+      timestamp: new Date()
+    };
+    setMessages(msgs => [...msgs, feedbackPrompt]);
   };
 
   return (

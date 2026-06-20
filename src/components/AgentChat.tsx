@@ -19,7 +19,16 @@ interface AgentChatProps {
   selectedModel: string;
   availableModels: string[];
   onSelectedModelChange: (modelName: string) => void;
-  chromaStatus: { available: boolean; host: string; port: number; version?: string | null; error?: string } | null;
+  chromaStatus: {
+    available: boolean;
+    host: string;
+    port: number;
+    version?: string | null;
+    error?: string;
+    embeddingModel?: string;
+    embeddingMode?: 'ollama' | 'hash' | string;
+    semanticSearch?: boolean;
+  } | null;
 }
 
 function cleanChatOutput(content: string) {
@@ -58,6 +67,26 @@ export default function AgentChat({
       setInput('');
     }
   };
+
+  const retrievalStatusLabel = (() => {
+    if (!chromaStatus) return 'Checking retrieval...';
+    if (!chromaStatus.available) return 'Keyword fallback';
+    if (chromaStatus.semanticSearch) return 'Vector (semantic)';
+    return 'Vector (hash fallback)';
+  })();
+
+  const retrievalStatusTitle = (() => {
+    if (!chromaStatus) return 'Checking Chroma status';
+    if (!chromaStatus.available) {
+      return chromaStatus.error || 'Chroma unavailable; keyword search will be used';
+    }
+
+    const embedInfo = chromaStatus.embeddingModel
+      ? `Embeddings: ${chromaStatus.embeddingModel} (${chromaStatus.embeddingMode || 'unknown'})`
+      : 'Embeddings configured';
+
+    return `Chroma available on ${chromaStatus.host}:${chromaStatus.port}. ${embedInfo}.`;
+  })();
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -169,14 +198,12 @@ export default function AgentChat({
             />
             <span>Use project context</span>
             <span
-              title={chromaStatus?.available
-                ? `Chroma available on ${chromaStatus.host}:${chromaStatus.port}`
-                : chromaStatus?.error || 'Checking Chroma status'}
+              title={retrievalStatusTitle}
               style={{
                 color: chromaStatus?.available ? 'var(--btn-primary-bg)' : 'var(--sidebar-text-muted)'
               }}
             >
-              {chromaStatus?.available ? 'Vector ready' : 'Keyword fallback'}
+              {retrievalStatusLabel}
             </span>
           </label>
           <select
