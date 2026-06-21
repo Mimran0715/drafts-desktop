@@ -221,7 +221,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
     <div className="h-full flex flex-col" style={{ background: 'var(--editor-bg)' }}>
       {/* Tab Bar */}
       <div 
-        className="border-b flex items-center overflow-x-auto"
+        className="editor-tabs border-b flex items-center overflow-x-auto"
         style={{
           background: 'var(--sidebar-bg)',
           borderColor: 'var(--border-main)'
@@ -231,7 +231,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
           <div
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className="group flex items-center gap-2 px-4 py-2 border-r cursor-pointer transition-colors min-w-0"
+            className="group flex items-center gap-2 px-3 py-2 border-r cursor-pointer transition-colors min-w-0"
             style={{
               background: tab.id === activeTabId ? 'var(--editor-bg)' : 'var(--sidebar-bg)',
               borderColor: 'var(--border-main)',
@@ -248,7 +248,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
               }
             }}
           >
-            <span className={`text-sm truncate max-w-[150px] ${tab.isDirty ? 'italic' : ''}`}>
+            <span className={`text-xs truncate max-w-[150px] ${tab.isDirty ? 'italic' : ''}`}>
               {tab.title}
               {tab.isDirty && ' •'}
             </span>
@@ -257,7 +257,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                 e.stopPropagation();
                 onTabClose(tab.id);
               }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs"
               style={{ color: 'var(--sidebar-text-muted)' }}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--editor-toolbar-text, var(--sidebar-text))'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--sidebar-text-muted)'}
@@ -269,7 +269,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
         
         <button
           onClick={onNewTab}
-          className="px-3 py-2 transition-colors"
+          className="px-3 py-2 transition-colors text-sm"
           style={{ color: 'var(--sidebar-text-muted)' }}
           onMouseEnter={(e) => {
             e.currentTarget.style.color = 'var(--sidebar-text)';
@@ -287,13 +287,13 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
 
       {/* Toolbar */}
       <div 
-        className="border-b px-6 py-3 flex items-center justify-between"
+        className="editor-toolbar border-b px-5 py-2 flex items-center justify-between gap-4"
         style={{
           background: 'var(--editor-toolbar-bg)',
           borderColor: 'var(--border-main)'
         }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           {/* File name with rename */}
           {isRenaming ? (
             <input
@@ -315,21 +315,21 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
           ) : (
             <button
               onClick={handleStartRename}
-              className="px-2 py-1 text-sm font-medium transition-all hover:opacity-70"
+              className="px-2 py-1 text-sm font-medium transition-all hover:opacity-70 truncate max-w-[220px]"
               style={{
                 color: 'var(--editor-toolbar-text, var(--sidebar-text))',
                 borderRadius: 'var(--radius-sm)'
               }}
               title="Click to rename"
             >
-              📄 {activeTab?.title || 'Untitled'}
+              {activeTab?.title || 'Untitled'}
             </button>
           )}
           
-          <span style={{ color: 'var(--sidebar-text-muted)' }}>·</span>
+          <span style={{ color: 'var(--sidebar-text-muted)' }}>/</span>
           
           <div 
-            className="flex items-center gap-4 text-sm"
+            className="flex items-center gap-3 text-xs whitespace-nowrap"
             style={{ color: 'var(--editor-toolbar-text, var(--sidebar-text))' }}
           >
             <span>{wordCount} words</span>
@@ -349,7 +349,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
           <div className="relative">
             <button 
               onClick={() => setShowFormatMenu(!showFormatMenu)}
-              className="px-4 py-2 text-sm border font-medium transition-all shadow-sm"
+              className="secondary-action px-3 py-2 text-xs border font-semibold transition-all"
               style={{
                 background: 'var(--btn-secondary-bg)',
                 borderColor: 'var(--border-input)',
@@ -358,29 +358,22 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              🔤 Format
+              Format
             </button>
             
             {showFormatMenu && (
               <div 
-                className="absolute top-full right-0 mt-2 py-3 px-4 shadow-lg z-50 min-w-[280px]"
-                style={{
-                  background: 'var(--sidebar-bg)',
-                  border: '1px solid var(--border-main)',
-                  borderRadius: 'var(--radius-lg)'
-                }}
+                className="menu-surface absolute top-full right-0 mt-2 py-3 px-4 z-50 min-w-[280px]"
               >
                 {/* Font Family */}
                 <div className="mb-4">
                   <label 
-                    className="block text-xs font-medium mb-2"
+                    className="section-title block mb-2"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
                     Font Family {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}
@@ -396,7 +389,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                             setFontFamily(font.id);
                           }
                         }}
-                        className="w-full px-3 py-2 text-left text-sm transition-colors"
+                        className="menu-button text-sm transition-colors"
                         style={{
                           background: fontFamily === font.id ? 'var(--sidebar-item-selected)' : 'transparent',
                           color: fontFamily === font.id ? 'var(--chat-user-text)' : 'var(--sidebar-text)',
@@ -423,7 +416,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                 {/* Format Text Buttons */}
                 <div className="mb-4">
                   <label 
-                    className="block text-xs font-medium mb-2"
+                    className="section-title block mb-2"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
                     Text Formatting
@@ -432,7 +425,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                     <button 
                       type="button" 
                       onClick={commands.bold}
-                      className="px-3 py-2 text-sm font-bold border rounded transition-colors"
+                      className="secondary-action w-9 h-8 text-sm font-bold border transition-colors"
                       style={{
                         background: 'var(--btn-secondary-bg)',
                         borderColor: 'var(--border-input)',
@@ -447,7 +440,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                     <button 
                       type="button" 
                       onClick={commands.italic}
-                      className="px-3 py-2 text-sm italic border rounded transition-colors"
+                      className="secondary-action w-9 h-8 text-sm italic border transition-colors"
                       style={{
                         background: 'var(--btn-secondary-bg)',
                         borderColor: 'var(--border-input)',
@@ -462,7 +455,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                     <button 
                       type="button" 
                       onClick={commands.underline}
-                      className="px-3 py-2 text-sm underline border rounded transition-colors"
+                      className="secondary-action w-9 h-8 text-sm underline border transition-colors"
                       style={{
                         background: 'var(--btn-secondary-bg)',
                         borderColor: 'var(--border-input)',
@@ -477,7 +470,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                     <button 
                       type="button" 
                       onClick={commands.strike}
-                      className="px-3 py-2 text-sm line-through border rounded transition-colors"
+                      className="secondary-action w-9 h-8 text-sm line-through border transition-colors"
                       style={{
                         background: 'var(--btn-secondary-bg)',
                         borderColor: 'var(--border-input)',
@@ -492,7 +485,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                     <button 
                       type="button" 
                       onClick={() => commands.highlight('#fff3a0')}
-                      className="px-3 py-2 text-sm border rounded transition-colors"
+                      className="secondary-action w-9 h-8 text-sm border transition-colors"
                       style={{
                         background: 'var(--btn-secondary-bg)',
                         borderColor: 'var(--border-input)',
@@ -502,7 +495,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                       onMouseLeave={(e) => e.currentTarget.style.background = 'var(--btn-secondary-bg)'}
                       title="Highlight"
                     >
-                      🖍
+                      H
                     </button>
                   </div>
                 </div>
@@ -510,7 +503,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                 {/* Font Size */}
                 <div className="mb-4">
                   <label 
-                    className="block text-xs font-medium mb-2 flex items-center justify-between"
+                    className="section-title mb-2 flex items-center justify-between"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
                     <span>Font Size {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}</span>
@@ -543,7 +536,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                 {/* Line Height */}
                 <div>
                   <label 
-                    className="block text-xs font-medium mb-2"
+                    className="section-title block mb-2"
                     style={{ color: 'var(--sidebar-text)' }}
                   >
                     Line Spacing {hasSelection && <span className="text-xs opacity-70">(applies to selection)</span>}
@@ -559,7 +552,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                             setLineHeight(lh.value);
                           }
                         }}
-                        className="w-full px-3 py-2 text-left text-sm transition-colors"
+                        className="menu-button text-sm transition-colors"
                         style={{
                           background: lineHeight === lh.value ? 'var(--sidebar-item-selected)' : 'transparent',
                           color: lineHeight === lh.value ? 'var(--chat-user-text)' : 'var(--sidebar-text)',
@@ -589,7 +582,7 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
           <div className="relative">
             <button 
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="px-4 py-2 text-sm border font-medium transition-all shadow-sm"
+              className="secondary-action px-3 py-2 text-xs border font-semibold transition-all"
               style={{
                 background: 'var(--btn-secondary-bg)',
                 borderColor: 'var(--border-input)',
@@ -598,11 +591,9 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               Export ▾
@@ -610,39 +601,34 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
             
             {showExportMenu && (
               <div 
-                className="absolute top-full right-0 mt-2 py-2 shadow-lg z-50 min-w-[140px]"
-                style={{
-                  background: 'var(--sidebar-bg)',
-                  border: '1px solid var(--border-main)',
-                  borderRadius: 'var(--radius-lg)'
-                }}
+                className="menu-surface absolute top-full right-0 mt-2 py-2 z-50 min-w-[150px]"
               >
                 <button
                   onClick={handleExport}
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  📄 Text (.txt)
+                  Text (.txt)
                 </button>
                 <button
                   onClick={handleExportDocx}
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  📘 Word (.docx)
+                  Word (.docx)
                 </button>
                 <button
                   onClick={handleExportPdf}
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-item-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  📕 PDF (.pdf)
+                  PDF (.pdf)
                 </button>
               </div>
             )}
@@ -712,16 +698,18 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
                 </div>
               </div>
             )}
-            <RichEditor
-              ref={editorRef}
-              value={activeTab.content}
-              onChange={handleContentChange}
-              fontFamily={currentFontFamily?.style || fontFamilies[0].style}
-              fontSize={fontSize}
-              lineHeight={lineHeight}
-              placeholder="Start writing your story here…"
-              className="w-full"
-            />
+            <div className="editor-page">
+              <RichEditor
+                ref={editorRef}
+                value={activeTab.content}
+                onChange={handleContentChange}
+                fontFamily={currentFontFamily?.style || fontFamilies[0].style}
+                fontSize={fontSize}
+                lineHeight={lineHeight}
+                placeholder="Start writing..."
+                className="w-full"
+              />
+            </div>
           </div>
         ) : (
           <div 
@@ -729,7 +717,6 @@ const DraftEditor = forwardRef<RichEditorHandle, DraftEditorProps>(function Draf
             style={{ color: 'var(--sidebar-text-muted)' }}
           >
             <div className="text-center">
-              <div className="text-4xl mb-3">📝</div>
               <p>No tab open. Click + to create a new draft.</p>
             </div>
           </div>

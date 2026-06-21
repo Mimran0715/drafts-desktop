@@ -18,29 +18,30 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
   const { theme, setTheme } = useTheme();
 
   const themes = [
-    { id: 'warm', name: 'Letter', icon: '🖊️' },
-    { id: 'dark', name: 'Dark', icon: '🌙' },
-    { id: 'rose', name: 'Rose', icon: '🌹' },
-    { id: 'sage', name: 'Sage', icon: '🍃' },
-    { id: 'ocean', name: 'Ocean', icon: '🌊' },
-    { id: 'midnight', name: 'Midnight', icon: '🌌' },
+    { id: 'warm', name: 'Letter', swatch: '#e4dfd2' },
+    { id: 'dark', name: 'Dark', swatch: '#1c1917' },
+    { id: 'rose', name: 'Rose', swatch: '#EEC8CF' },
+    { id: 'sage', name: 'Sage', swatch: '#c8d5b9' },
+    { id: 'ocean', name: 'Ocean', swatch: '#2c5f7c' },
+    { id: 'midnight', name: 'Midnight', swatch: '#1a1f3a' },
   ];
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'var(--sidebar-bg)' }}>
+    <div className="app-shell h-screen flex flex-col">
       {/* Header */}
       <header 
-        className="px-6 py-5 flex items-center justify-between shadow-sm"
+        className="app-header px-4 py-3 flex items-center justify-between"
         style={{ 
           background: 'var(--sidebar-bg)',
           color: 'var(--sidebar-text)'
         }}
       >
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">✏️ Drafts</h1>
-          <span className="text-sm font-medium" style={{ color: 'var(--sidebar-text-muted)' }}>
-            Your AI writing companion
-          </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="brand-mark" aria-hidden>D</span>
+          <div className="min-w-0">
+            <h1 className="text-[17px] font-semibold tracking-tight leading-5">Drafts</h1>
+            <span className="kicker block truncate">Writing desk</span>
+          </div>
         </div>
         
         {/* Settings and Profile Icons */}
@@ -49,42 +50,25 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
           <div className="relative">
             <button
               onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all shadow-sm"
-              style={{
-                background: 'var(--btn-secondary-bg)',
-                color: 'var(--sidebar-text)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--btn-secondary-hover)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--btn-secondary-bg)';
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-              }}
+              className="icon-button"
               title="Settings"
             >
-              ⚙️
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.3 4.6c.4-1.5 2.9-1.5 3.4 0l.2.9a1.8 1.8 0 0 0 2.5 1.1l.8-.4c1.4-.8 3.1 1 2.3 2.3l-.4.8a1.8 1.8 0 0 0 1.1 2.5l.9.2c1.5.4 1.5 2.9 0 3.4l-.9.2a1.8 1.8 0 0 0-1.1 2.5l.4.8c.8 1.4-1 3.1-2.3 2.3l-.8-.4a1.8 1.8 0 0 0-2.5 1.1l-.2.9c-.4 1.5-2.9 1.5-3.4 0l-.2-.9a1.8 1.8 0 0 0-2.5-1.1l-.8.4c-1.4.8-3.1-1-2.3-2.3l.4-.8a1.8 1.8 0 0 0-1.1-2.5l-.9-.2c-1.5-.4-1.5-2.9 0-3.4l.9-.2a1.8 1.8 0 0 0 1.1-2.5l-.4-.8c-.8-1.4 1-3.1 2.3-2.3l.8.4a1.8 1.8 0 0 0 2.5-1.1l.2-.9Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
+              </svg>
             </button>
             
             {showSettingsMenu && (
               <div 
-                className="absolute right-0 mt-2 py-2 shadow-lg z-50 min-w-[220px]"
-                style={{
-                  background: 'var(--sidebar-bg)',
-                  border: '1px solid var(--border-main)',
-                  borderRadius: 'var(--radius-lg)'
-                }}
+                className="menu-surface absolute right-0 mt-2 py-2 z-50 min-w-[220px]"
               >
                 {/* Theme Section */}
                 <div className="px-3 py-2">
                   <div 
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: 'var(--sidebar-text-muted)' }}
+                    className="section-title mb-2"
                   >
-                    THEME
+                    Theme
                   </div>
                   {themes.map((t) => (
                     <button
@@ -92,7 +76,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                       onClick={() => {
                         setTheme(t.id as any);
                       }}
-                      className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                      className="menu-button text-sm transition-colors flex items-center gap-2"
                       style={{
                         background: theme === t.id ? 'var(--sidebar-item-selected)' : 'transparent',
                         color: theme === t.id ? 'var(--chat-user-text)' : 'var(--sidebar-text)',
@@ -109,7 +93,10 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                         }
                       }}
                     >
-                      <span>{t.icon}</span>
+                      <span
+                        className="inline-block w-3 h-3 border"
+                        style={{ background: t.swatch, borderColor: 'var(--border-input)', borderRadius: '999px' }}
+                      />
                       <span>{t.name}</span>
                     </button>
                   ))}
@@ -120,16 +107,15 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                 {/* View Options */}
                 <div className="px-3 py-2">
                   <div 
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: 'var(--sidebar-text-muted)' }}
+                    className="section-title mb-2"
                   >
-                    VIEW
+                    View
                   </div>
                   <button
                     onClick={() => {
                       setFilesCollapsed(!filesCollapsed);
                     }}
-                    className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                    className="menu-button text-sm transition-colors flex items-center gap-2"
                     style={{
                       color: 'var(--sidebar-text)',
                       borderRadius: 'var(--radius-sm)'
@@ -141,14 +127,13 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <span>📁</span>
                     <span>{filesCollapsed ? 'Show Files' : 'Hide Files'}</span>
                   </button>
                   <button
                     onClick={() => {
                       setChatCollapsed(!chatCollapsed);
                     }}
-                    className="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                    className="menu-button text-sm transition-colors flex items-center gap-2"
                     style={{
                       color: 'var(--sidebar-text)',
                       borderRadius: 'var(--radius-sm)'
@@ -160,7 +145,6 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <span>💬</span>
                     <span>{chatCollapsed ? 'Show Chat' : 'Hide Chat'}</span>
                   </button>
                 </div>
@@ -169,7 +153,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                 
                 {/* Other Settings */}
                 <button
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--sidebar-item-hover)';
@@ -178,11 +162,11 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  ⌨️ Keyboard Shortcuts
+                  Keyboard shortcuts
                 </button>
                 
                 <button
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--sidebar-item-hover)';
@@ -191,7 +175,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  ℹ️ About
+                  About
                 </button>
               </div>
             )}
@@ -201,32 +185,18 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-all shadow-sm"
-              style={{
-                background: 'var(--btn-secondary-bg)',
-                color: 'var(--sidebar-text)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-              }}
+              className="icon-button"
               title="Profile & Account"
             >
-              👤
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 21a8 8 0 0 0-16 0" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+              </svg>
             </button>
             
             {showProfileMenu && (
               <div 
-                className="absolute right-0 mt-2 py-2 shadow-lg z-50 min-w-[200px]"
-                style={{
-                  background: 'var(--sidebar-bg)',
-                  border: '1px solid var(--border-main)',
-                  borderRadius: 'var(--radius-lg)'
-                }}
+                className="menu-surface absolute right-0 mt-2 py-2 z-50 min-w-[200px]"
               >
                 <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
                   <div className="font-medium text-sm" style={{ color: 'var(--sidebar-text)' }}>
@@ -238,7 +208,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                 </div>
                 
                 <button
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--sidebar-item-hover)';
@@ -247,11 +217,11 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  👤 Profile
+                  Profile
                 </button>
                 
                 {/* <button
-                  className="w-full px-4 py-2 text-left text-sm transition-colors"
+                  className="menu-button text-sm transition-colors"
                   style={{ color: 'var(--sidebar-text)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--sidebar-item-hover)';
@@ -275,7 +245,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  🚪 Sign Out
+                  Sign out
                 </button>
               </div>
             )}
@@ -320,7 +290,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                 className="flex items-center justify-between p-4 border-b"
                 style={{ borderColor: 'var(--border-main)' }}
               >
-                <h2 className="text-sm font-bold" style={{ color: 'var(--sidebar-text)' }}>Files</h2>
+                <h2 className="section-title" style={{ color: 'var(--sidebar-text-muted)' }}>Files</h2>
                 <button
                   onClick={() => setFilesCollapsed(true)}
                   className="transition-colors"
@@ -385,7 +355,7 @@ export default function PageLayout({ filesSidebar, editor, agentChat }: PageLayo
                 className="flex items-center justify-between p-4 border-b"
                 style={{ borderColor: 'var(--border-main)' }}
               >
-                <h2 className="text-sm font-bold" style={{ color: 'var(--sidebar-text)' }}>Chat</h2>
+                <h2 className="section-title" style={{ color: 'var(--sidebar-text-muted)' }}>Assistant</h2>
                 <button
                   onClick={() => setChatCollapsed(true)}
                   className="transition-colors"

@@ -100,13 +100,13 @@ export default function AgentChat({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">✨</div>
-            <p className="text-sm mb-2" style={{ color: 'var(--sidebar-text-muted)' }}>
-              Your AI writing companion is ready
+          <div className="py-12 px-2">
+            <p className="section-title mb-3">Assistant</p>
+            <p className="text-sm mb-2" style={{ color: 'var(--sidebar-text)' }}>
+              Ready for revision notes, scene options, and continuity checks.
             </p>
             <p className="text-xs" style={{ color: 'var(--sidebar-text-muted)' }}>
-              Ask for help, suggestions, or brainstorm ideas
+              Project context can be enabled below.
             </p>
           </div>
         ) : (
@@ -116,11 +116,11 @@ export default function AgentChat({
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className="max-w-[85%] px-4 py-3 shadow-sm"
+                className={`chat-message max-w-[85%] px-4 py-3 shadow-sm ${message.role === 'user' ? 'user' : ''}`}
                 style={{
                   background: message.role === 'user' ? 'var(--chat-user-bg)' : 'var(--chat-agent-bg)',
                   color: message.role === 'user' ? 'var(--chat-user-text)' : 'var(--chat-agent-text)',
-                  borderRadius: 'var(--radius-lg)'
+                  borderRadius: 'var(--radius-md)'
                 }}
               >
                 <div 
@@ -130,7 +130,7 @@ export default function AgentChat({
                     opacity: message.role === 'user' ? 0.8 : 1
                   }}
                 >
-                  {message.role === 'user' ? 'You' : '✏️ Companion'}
+                  {message.role === 'user' ? 'You' : 'Drafts'}
                 </div>
                 {message.role === 'agent' && message.isStreaming && !message.content ? (
                   <div 
@@ -182,12 +182,12 @@ export default function AgentChat({
 
       {/* Input */}
       <div 
-        className="p-4 border-t"
+        className="chat-composer p-4 border-t"
         style={{ borderColor: 'var(--border-main)' }}
       >
         <div className="flex items-center justify-between gap-3 mb-3">
           <label 
-            className="flex items-center gap-2 text-xs select-none"
+            className="flex items-center gap-2 text-xs select-none min-w-0"
             style={{ color: 'var(--sidebar-text-muted)' }}
           >
             <input
@@ -253,25 +253,21 @@ export default function AgentChat({
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="px-5 font-medium transition-all self-end shadow-sm"
+            className="primary-action px-4 font-semibold transition-all self-end text-sm"
             style={{
               background: (!input.trim() || isLoading) ? 'var(--btn-secondary-bg)' : 'var(--btn-primary-bg)',
               color: 'var(--chat-user-text)',
               cursor: (!input.trim() || isLoading) ? 'not-allowed' : 'pointer',
-              borderRadius: 'var(--radius-lg)'
+              borderRadius: 'var(--radius-md)'
             }}
             onMouseEnter={(e) => {
               if (input.trim() && !isLoading) {
                 e.currentTarget.style.background = 'var(--btn-primary-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
               }
             }}
             onMouseLeave={(e) => {
               if (input.trim() && !isLoading) {
                 e.currentTarget.style.background = 'var(--btn-primary-bg)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
               }
             }}
           >
