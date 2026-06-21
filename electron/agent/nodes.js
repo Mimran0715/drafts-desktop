@@ -135,7 +135,7 @@ function formatRagContext(searchResults) {
 }
 
 function splitGeneratedWriting(generatedText = '') {
-  const text = String(generatedText).trim();
+  const text = stripGeneratedLeadIn(String(generatedText).trim());
   const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
 
   if (separatorMatch?.index !== undefined) {
@@ -160,6 +160,15 @@ function splitGeneratedWriting(generatedText = '') {
     writing: text,
     note: ''
   };
+}
+
+function stripGeneratedLeadIn(text = '') {
+  return String(text)
+    .replace(
+      /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
+      ''
+    )
+    .trim();
 }
 
 /**

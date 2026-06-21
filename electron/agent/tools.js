@@ -38,7 +38,7 @@ function chunkContentToText(content) {
 }
 
 function splitGeneratedWriting(generatedText = '') {
-  const text = String(generatedText).trim();
+  const text = stripGeneratedLeadIn(String(generatedText).trim());
   const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
 
   if (separatorMatch?.index !== undefined) {
@@ -47,6 +47,15 @@ function splitGeneratedWriting(generatedText = '') {
   }
 
   return text;
+}
+
+function stripGeneratedLeadIn(text = '') {
+  return String(text)
+    .replace(
+      /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
+      ''
+    )
+    .trim();
 }
 
 function normalizeSuggestionText(text = '') {
@@ -480,7 +489,7 @@ Output format is required:
 2. Then write a standalone separator line containing exactly three hyphens: ---
 3. After the separator, write any brief note, explanation, or question for the user.
 
-Do not put commentary, explanation, greetings, or questions before the separator. The text before --- must be ready to insert directly into the draft.`;
+Do not put commentary, explanation, greetings, labels, or questions before the separator. Do not start with phrases like "Here is a continuation of the story" or "Here's a draft". The text before --- must be ready to insert directly into the draft.`;
 
   try {
     let generated = await invokeModel([

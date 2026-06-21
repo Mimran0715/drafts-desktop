@@ -81,6 +81,15 @@ function getFolderName(folderPath: string) {
   return folderPath.split('/').pop() || folderPath.split('\\').pop() || 'Untitled';
 }
 
+function cleanSuggestionForEditor(suggestion: string) {
+  return suggestion
+    .replace(
+      /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
+      ''
+    )
+    .trim();
+}
+
 function AppContent() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -626,10 +635,11 @@ function AppContent() {
 
       // If there's generated text, show it as a suggestion
       if (response.generatedText) {
+        const editorSuggestion = cleanSuggestionForEditor(response.generatedText);
         console.log('📝 Received generated text from agent');
-        rememberSuggestion(response.generatedText, 'recent');
+        rememberSuggestion(editorSuggestion, 'recent');
         lastRejectedSuggestionRef.current = null;
-        setPendingSuggestion(response.generatedText);
+        setPendingSuggestion(editorSuggestion);
       }
 
     } catch (error) {
@@ -667,7 +677,7 @@ function AppContent() {
     console.log('✅ Accepting suggestion');
 
     // Convert plain text suggestion to HTML paragraphs
-    const htmlSuggestion = pendingSuggestion
+    const htmlSuggestion = cleanSuggestionForEditor(pendingSuggestion)
       .split('\n\n')
       .filter(p => p.trim())
       .map(p => `<p>${p.trim()}</p>`)
