@@ -2,8 +2,6 @@
 
 Drafts is a local-first desktop writing app with an AI companion for drafting, revising, searching project notes, and reviewing in-progress work.
 
-https://github.com/user-attachments/assets/ff60d5f7-3bdc-4873-8057-094a569d2d8c
-
 Built with Electron, React, TypeScript, Vite, LangChain, LangGraph, Ollama, Chroma, and SQLite.
 
 ## Features

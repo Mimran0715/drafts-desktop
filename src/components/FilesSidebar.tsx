@@ -236,18 +236,7 @@ export default function FilesSidebar({
                         }
                       }}
                     >
-                      <div className="font-medium text-sm mb-1">{project.name}</div>
-                      <div 
-                        className="text-xs truncate"
-                        style={{ 
-                          color: currentProject?.path === project.path 
-                            ? 'var(--chat-user-text)' 
-                            : 'var(--sidebar-text-muted)',
-                          opacity: currentProject?.path === project.path ? 0.8 : 1
-                        }}
-                      >
-                        {project.path}
-                      </div>
+                      <div className="font-medium text-sm">{project.name}</div>
                       {project.last_opened && (
                         <div 
                           className="text-xs mt-1"
@@ -293,13 +282,6 @@ export default function FilesSidebar({
                   >
                     {currentProject.name}
                   </h3>
-                  <p 
-                    className="text-xs truncate mt-1"
-                    style={{ color: 'var(--sidebar-text-muted)' }}
-                    title={currentProject.path}
-                  >
-                    {currentProject.path}
-                  </p>
                 </div>
 
                 <button
