@@ -13,7 +13,7 @@ Built with Electron, React, TypeScript, Vite, LangChain, LangGraph, Ollama, Chro
 - **Editor suggestions** - Generated prose is returned separately from chat commentary and appears as an accept/reject editor suggestion.
 - **Revision loop** - Rejected suggestions are remembered and passed back to the agent so follow-up generations avoid repeating the same text.
 - **Optional project context** - A RAG toggle retrieves relevant snippets from the current project before analysis, search, or generation.
-- **Local Ollama models** - Select supported local chat models, currently `llama3.1` or `llama3.2`.
+- **Local Ollama models** - Uses `llama-writer` by default, with `llama3.1` available from the model selector.
 - **Session restore** - Last project, RAG preference, selected model, recent projects, and conversation state persist locally.
 - **Document support** - Loads and saves `.md`, `.txt`, and `.docx`; `.doc` files are detected but not parsed as editable Word documents.
 
@@ -97,8 +97,7 @@ npm run electron:build
 Drafts expects Ollama to be running locally for chat generation:
 
 ```bash
-ollama pull llama3.1
-ollama pull llama3.2
+ollama list # verify that llama-writer is available
 ```
 
 For semantic RAG, install the embedding model:

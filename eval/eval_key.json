@@ -1,0 +1,117 @@
+{
+  "p1_physical_confrontation": {
+    "prompt": "Write a scene where two characters argue in a cramped elevator that has stopped between floors. Track the physical position of both characters and how the confined space constrains their movement. Avoid metaphors; use precise spatial description.",
+    "response_a_is": "finetuned",
+    "response_b_is": "base",
+    "heuristics_a": {
+      "word_count": 868,
+      "avg_sentence_length": 18.9,
+      "sentence_length_stdev": 8.8,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 39,
+      "spatial_hits_per_100_words": 4.49
+    },
+    "heuristics_b": {
+      "word_count": 353,
+      "avg_sentence_length": 17.6,
+      "sentence_length_stdev": 6.2,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 6,
+      "spatial_hits_per_100_words": 1.7
+    }
+  },
+  "p2_subtext_dialogue": {
+    "prompt": "Write a dinner-table conversation between a parent and adult child where neither says what they actually mean. Focus on subtext - what each line is really doing beneath the surface meaning. Avoid explicit narration of emotions; let word choice and evasion carry the subtext.",
+    "response_a_is": "base",
+    "response_b_is": "finetuned",
+    "heuristics_a": {
+      "word_count": 263,
+      "avg_sentence_length": 13.8,
+      "sentence_length_stdev": 9.4,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 4,
+      "spatial_hits_per_100_words": 1.52
+    },
+    "heuristics_b": {
+      "word_count": 1010,
+      "avg_sentence_length": 12.6,
+      "sentence_length_stdev": 11.7,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 5,
+      "spatial_hits_per_100_words": 0.5
+    }
+  },
+  "p3_chase_uneven_terrain": {
+    "prompt": "Write a foot chase across a rooftop under construction, with exposed beams and unfinished flooring. Track exact footing, balance, and near-falls for both the pursuer and the pursued. Avoid cinematic flourish; focus on kinesthetic detail.",
+    "response_a_is": "base",
+    "response_b_is": "finetuned",
+    "heuristics_a": {
+      "word_count": 415,
+      "avg_sentence_length": 18.9,
+      "sentence_length_stdev": 4.7,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 14,
+      "spatial_hits_per_100_words": 3.37
+    },
+    "heuristics_b": {
+      "word_count": 916,
+      "avg_sentence_length": 15.5,
+      "sentence_length_stdev": 6.8,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 35,
+      "spatial_hits_per_100_words": 3.82
+    }
+  },
+  "p4_quiet_introspection": {
+    "prompt": "Write a short quiet scene of a character packing a childhood bedroom into boxes after a parent's death. Ground the scene in specific physical objects and actions rather than internal monologue about grief.",
+    "response_a_is": "finetuned",
+    "response_b_is": "base",
+    "heuristics_a": {
+      "word_count": 763,
+      "avg_sentence_length": 16.6,
+      "sentence_length_stdev": 10.1,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 0,
+      "spatial_hits_per_100_words": 0.0
+    },
+    "heuristics_b": {
+      "word_count": 396,
+      "avg_sentence_length": 24.8,
+      "sentence_length_stdev": 9.7,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 0,
+      "spatial_hits_per_100_words": 0.0
+    }
+  },
+  "p5_negotiation_standoff": {
+    "prompt": "Write a tense standoff between a shop owner and a debt collector across a counter. Track hand positions, what each is holding or reaching for, and the physical objects between them. Keep dialogue clipped and avoid melodrama.",
+    "response_a_is": "base",
+    "response_b_is": "finetuned",
+    "heuristics_a": {
+      "word_count": 383,
+      "avg_sentence_length": 9.8,
+      "sentence_length_stdev": 5.9,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 13,
+      "spatial_hits_per_100_words": 3.39
+    },
+    "heuristics_b": {
+      "word_count": 1007,
+      "avg_sentence_length": 11.6,
+      "sentence_length_stdev": 8.2,
+      "cliche_phrase_hits": 0,
+      "cliche_hits_per_100_words": 0.0,
+      "spatial_term_hits": 20,
+      "spatial_hits_per_100_words": 1.99
+    }
+  }
+}

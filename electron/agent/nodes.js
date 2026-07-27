@@ -6,7 +6,7 @@ const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/mess
 const { searchContext, analyzeDraft, generateText, askQuestion } = require('./tools');
 const { traceable } = require('langsmith/traceable');
 
-const MODEL = "llama3.1";
+const MODEL = "llama-writer";
 const modelCache = new Map();
 
 function getModel(modelName = MODEL) {
