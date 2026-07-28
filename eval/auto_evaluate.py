@@ -153,13 +153,24 @@ def evaluate_case(
                 if attempt < retries:
                     time.sleep(1)
         else:
-            raise RuntimeError(f"Judge failed after {retries + 1} attempts: {last_error}")
+            error = f"Judge failed after {retries + 1} attempts: {last_error}"
+            print(f"  Warning: trial {trial + 1} skipped: {error}")
+            judgments.append(
+                {
+                    "trial": trial + 1,
+                    "display_order": list(order),
+                    "status": "failed",
+                    "error": error,
+                }
+            )
+            continue
 
         preference = parsed["preference"]
         judgments.append(
             {
                 "trial": trial + 1,
                 "display_order": list(order),
+                "status": "valid",
                 "scores": {order[0]: parsed["left"], order[1]: parsed["right"]},
                 "preference": order[0] if preference == "LEFT" else order[1] if preference == "RIGHT" else "TIE",
                 "reason": parsed["reason"],
@@ -172,6 +183,8 @@ def aggregate(cases: dict[str, dict[str, str]], key: dict[str, Any], raw: dict[s
     model_scores: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     preference_counts: dict[str, int] = defaultdict(int)
     case_results = {}
+    attempted_judgments = 0
+    valid_judgments = 0
 
     for case_id in cases:
         if case_id not in key:
@@ -180,7 +193,11 @@ def aggregate(cases: dict[str, dict[str, str]], key: dict[str, Any], raw: dict[s
             "A": key[case_id]["response_a_is"],
             "B": key[case_id]["response_b_is"],
         }
-        trials = raw[case_id]
+        all_trials = raw[case_id]
+        attempted_judgments += len(all_trials)
+        trials = [trial for trial in all_trials if trial.get("status", "valid") == "valid"]
+        failures = [trial for trial in all_trials if trial.get("status") == "failed"]
+        valid_judgments += len(trials)
         trial_preferences = []
         label_scores: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
         for trial in trials:
@@ -207,6 +224,9 @@ def aggregate(cases: dict[str, dict[str, str]], key: dict[str, Any], raw: dict[s
             },
             "trial_preferences": trial_preferences,
             "reasons": [trial["reason"] for trial in trials],
+            "valid_trials": len(trials),
+            "attempted_trials": len(all_trials),
+            "failures": [trial["error"] for trial in failures],
         }
 
     models = {
@@ -219,7 +239,16 @@ def aggregate(cases: dict[str, dict[str, str]], key: dict[str, Any], raw: dict[s
         }
         for model, criteria in model_scores.items()
     }
-    return {"models": models, "preference_counts": dict(preference_counts), "cases": case_results}
+    return {
+        "models": models,
+        "preference_counts": dict(preference_counts),
+        "coverage": {
+            "valid_judgments": valid_judgments,
+            "attempted_judgments": attempted_judgments,
+            "completion_rate": round(valid_judgments / attempted_judgments, 3) if attempted_judgments else 0,
+        },
+        "cases": case_results,
+    }
 
 
 def markdown_report(result: dict[str, Any], judge_model: str, trials: int) -> str:
@@ -228,6 +257,8 @@ def markdown_report(result: dict[str, Any], judge_model: str, trials: int) -> st
         "# Automated Evaluation Results",
         "",
         f"Judge model: `{judge_model}` · Trials per prompt: {trials}",
+        "",
+        f"Coverage: {result['coverage']['valid_judgments']}/{result['coverage']['attempted_judgments']} valid judgments ({result['coverage']['completion_rate']:.1%})",
         "",
         "## Overall scores",
         "",
@@ -245,11 +276,17 @@ def markdown_report(result: dict[str, Any], judge_model: str, trials: int) -> st
     for case_id, case in result["cases"].items():
         lines.append(f"### {case_id}")
         lines.append("")
-        for model, scores in case["mean_scores"].items():
-            score_text = ", ".join(f"{name.replace('_', ' ')} {score:.2f}" for name, score in scores.items())
-            lines.append(f"- {model}: {score_text}")
-        lines.append(f"- Preferences: {', '.join(case['trial_preferences'])}")
-        lines.append(f"- Judge reasons: {' / '.join(case['reasons'])}")
+        lines.append(f"- Coverage: {case['valid_trials']}/{case['attempted_trials']} valid trials")
+        if case["mean_scores"]:
+            for model, scores in case["mean_scores"].items():
+                score_text = ", ".join(f"{name.replace('_', ' ')} {score:.2f}" for name, score in scores.items())
+                lines.append(f"- {model}: {score_text}")
+            lines.append(f"- Preferences: {', '.join(case['trial_preferences'])}")
+            lines.append(f"- Judge reasons: {' / '.join(case['reasons'])}")
+        else:
+            lines.append("- Result: unavailable because every judge attempt failed")
+        for failure in case["failures"]:
+            lines.append(f"- Warning: {failure}")
         lines.append("")
     lines.extend(
         [

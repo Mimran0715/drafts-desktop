@@ -29,7 +29,10 @@ trials show each response first once, reducing response-order bias; higher even
 trial counts are supported.
 
 The script retries malformed judge output, validates every score, uses a zero
-temperature, and fails rather than silently accepting incomplete results.
+temperature, and records failed trials rather than aborting the run. Aggregates
+use only valid judgments; the Markdown and JSON outputs include coverage and
+failure details so partial results remain clearly distinguishable from complete
+results.
 
 Run the offline tests with:
 

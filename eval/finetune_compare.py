@@ -35,7 +35,8 @@ EVAL_DIR = __import__("pathlib").Path(__file__).resolve().parent
 
 OLLAMA_URL = "http://localhost:11434"
 MODEL_FINETUNED = "llama-writer"   # your fine-tuned model name in Ollama
-MODEL_BASE = "llama3.1"                 # base model name in Ollama
+# MODEL_BASE = "llama3.1"                 # base model name in Ollama
+MODEL_BASE = "llama3"
 
 SYSTEM_PROMPT = """You are an AI writing companion.
 
@@ -164,6 +165,8 @@ def main():
     )
 
     key = {}
+    print("Base model: ", MODEL_BASE)
+    print("Finetuned: ", MODEL_FINETUNED)
 
     for item in PROMPTS:
         pid, prompt_text = item["id"], item["text"]

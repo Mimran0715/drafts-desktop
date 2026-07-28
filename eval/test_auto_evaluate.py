@@ -1,7 +1,9 @@
 import json
 import unittest
 
-from auto_evaluate import aggregate, parse_blind_markdown, validate_judgment
+from unittest.mock import patch
+
+from auto_evaluate import aggregate, evaluate_case, parse_blind_markdown, validate_judgment
 
 
 class AutoEvaluateTests(unittest.TestCase):
@@ -67,6 +69,20 @@ Second response.
         result = aggregate(cases, key, raw)
         self.assertEqual(result["models"]["finetuned"]["overall_mean"], 5)
         self.assertEqual(result["preference_counts"], {"finetuned": 1})
+
+    @patch("auto_evaluate.time.sleep")
+    @patch("auto_evaluate.ollama_chat", side_effect=RuntimeError("model stopped"))
+    def test_failed_judge_trials_are_recorded_instead_of_raised(self, _chat, _sleep):
+        case = {"prompt": "prompt", "A": "one", "B": "two"}
+        judgments = evaluate_case(case, "qwen3.5:4b", "http://localhost:11434", 2, 1, 2)
+        self.assertEqual(len(judgments), 2)
+        self.assertTrue(all(item["status"] == "failed" for item in judgments))
+
+        key = {"p1": {"response_a_is": "finetuned", "response_b_is": "base"}}
+        result = aggregate({"p1": case}, key, {"p1": judgments})
+        self.assertEqual(result["models"], {})
+        self.assertEqual(result["coverage"]["completion_rate"], 0)
+        self.assertEqual(result["cases"]["p1"]["valid_trials"], 0)
 
 
 if __name__ == "__main__":

@@ -1,66 +1,44 @@
 {
   "models": {
-    "finetuned": {
-      "mean_scores": {
-        "physical_coherence": 4.7,
-        "prose_control": 4.6,
-        "sensory_concreteness": 4.8,
-        "constraint_adherence": 4.8
-      },
-      "overall_mean": 4.72
-    },
     "base": {
       "mean_scores": {
-        "physical_coherence": 3.75,
-        "prose_control": 3.6,
-        "sensory_concreteness": 3.8,
-        "constraint_adherence": 4.5
+        "physical_coherence": 2.88,
+        "prose_control": 2.38,
+        "sensory_concreteness": 2.5,
+        "constraint_adherence": 2.5
       },
-      "overall_mean": 3.91
+      "overall_mean": 2.56
+    },
+    "finetuned": {
+      "mean_scores": {
+        "physical_coherence": 4.69,
+        "prose_control": 3.19,
+        "sensory_concreteness": 4.25,
+        "constraint_adherence": 3.88
+      },
+      "overall_mean": 4.0
     }
   },
   "preference_counts": {
-    "finetuned": 8,
+    "finetuned": 6,
     "base": 2
+  },
+  "coverage": {
+    "valid_judgments": 8,
+    "attempted_judgments": 10,
+    "completion_rate": 0.8
   },
   "cases": {
     "p1_physical_confrontation": {
       "prompt": "Write a scene where two characters argue in a cramped elevator that has stopped between floors. Track the physical position of both characters and how the confined space constrains their movement. Avoid metaphors; use precise spatial description.",
-      "response_a_is": "finetuned",
-      "response_b_is": "base",
-      "mean_scores": {
-        "finetuned": {
-          "physical_coherence": 5,
-          "prose_control": 5,
-          "sensory_concreteness": 5,
-          "constraint_adherence": 5
-        },
-        "base": {
-          "physical_coherence": 4,
-          "prose_control": 4,
-          "sensory_concreteness": 4.5,
-          "constraint_adherence": 4.5
-        }
-      },
-      "trial_preferences": [
-        "finetuned",
-        "finetuned"
-      ],
-      "reasons": [
-        "The LEFT response demonstrates a more nuanced and detailed physical description of the characters' movements within the cramped elevator, effectively conveying the tension and constraint. The RIGHT response relies on more generic descriptions and lacks the same level of sensory detail.",
-        "The RIGHT response demonstrates a more nuanced and detailed understanding of the physical constraints of the elevator space. The description of Alex's movements and Maya's positioning is more precise and immersive, creating a stronger sense of tension and confinement."
-      ]
-    },
-    "p2_subtext_dialogue": {
-      "prompt": "Write a dinner-table conversation between a parent and adult child where neither says what they actually mean. Focus on subtext - what each line is really doing beneath the surface meaning. Avoid explicit narration of emotions; let word choice and evasion carry the subtext.",
       "response_a_is": "base",
       "response_b_is": "finetuned",
       "mean_scores": {
         "base": {
-          "physical_coherence": 3.5,
+          "physical_coherence": 2.5,
           "prose_control": 2.5,
-          "sensory_concreteness": 3,
-          "constraint_adherence": 4.5
+          "sensory_concreteness": 2,
+          "constraint_adherence": 1.5
         },
         "finetuned": {
           "physical_coherence": 5,
@@ -74,53 +52,29 @@
         "finetuned"
       ],
       "reasons": [
-        "The RIGHT response demonstrates a more nuanced understanding of subtext and uses specific, grounded sensory details to convey the underlying emotions. The physical setting is vividly described, and the character descriptions are concise yet evocative. The conversation itself is a masterclass in subtle implication, with each line building on the previous one to create a rich tapestry of unspoken meaning.",
-        "The LEFT response demonstrates a more nuanced and subtle exploration of subtext, with each line building on the previous one to create a rich tapestry of unspoken meanings. The use of specific sensory details (e.g., 'the scent is clean laundry, slightly burnt dinner') and physical descriptions (e.g., 'posture slightly guarded, hands busy folding the napkin into precise squares') adds depth and concreteness to the narrative. In contrast, the RIGHT response relies on more generic language and clich\u00e9s ('shadows on a moonlit night', 'unspoken accusations and unexpressed fears swirled beneath the surface'), which detract from its overall impact."
-      ]
-    },
-    "p3_chase_uneven_terrain": {
-      "prompt": "Write a foot chase across a rooftop under construction, with exposed beams and unfinished flooring. Track exact footing, balance, and near-falls for both the pursuer and the pursued. Avoid cinematic flourish; focus on kinesthetic detail.",
-      "response_a_is": "base",
-      "response_b_is": "finetuned",
-      "mean_scores": {
-        "base": {
-          "physical_coherence": 4.25,
-          "prose_control": 3.5,
-          "sensory_concreteness": 4,
-          "constraint_adherence": 4.5
-        },
-        "finetuned": {
-          "physical_coherence": 4.5,
-          "prose_control": 4.0,
-          "sensory_concreteness": 4.5,
-          "constraint_adherence": 4.5
-        }
-      },
-      "trial_preferences": [
-        "base",
-        "finetuned"
+        "RIGHT adheres strictly to the constraint of avoiding metaphors and using precise spatial description (e.g., specific angles, distances), whereas LEFT relies on clich\u00e9d abstract language ('air grew thick', 'fragile thread'). RIGHT demonstrates superior physical coherence through measurable movement details that respect elevator constraints.",
+        "Left adheres strictly to spatial constraints with precise measurements (e.g., 'eight centimeters', 'twelve degrees') and avoids clich\u00e9s throughout the scene. Right fails physical logic by describing pacing in a stopped elevator, uses pervasive metaphors ('eyes snapped', 'air grew thick'), and lacks specific sensory detail."
       ],
-      "reasons": [
-        "The LEFT response demonstrates superior physical coherence, with a more nuanced and detailed portrayal of the characters' movements and balance. The sensory concreteness is also more vivid and immersive, effectively conveying the sights, sounds, and textures of the rooftop environment.",
-        "The LEFT response demonstrates superior physical coherence, with a more nuanced and detailed depiction of the rooftop environment and the characters' movements. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Sensory concreteness is equally impressive in both responses, but the LEFT response excels in this area as well."
-      ]
+      "valid_trials": 2,
+      "attempted_trials": 2,
+      "failures": []
     },
-    "p4_quiet_introspection": {
-      "prompt": "Write a short quiet scene of a character packing a childhood bedroom into boxes after a parent's death. Ground the scene in specific physical objects and actions rather than internal monologue about grief.",
+    "p2_subtext_dialogue": {
+      "prompt": "Write a dinner-table conversation between a parent and adult child where neither says what they actually mean. Focus on subtext - what each line is really doing beneath the surface meaning. Avoid explicit narration of emotions; let word choice and evasion carry the subtext.",
       "response_a_is": "finetuned",
       "response_b_is": "base",
       "mean_scores": {
         "finetuned": {
-          "physical_coherence": 5,
-          "prose_control": 5,
-          "sensory_concreteness": 5,
-          "constraint_adherence": 5
+          "physical_coherence": 4.25,
+          "prose_control": 3.25,
+          "sensory_concreteness": 4,
+          "constraint_adherence": 2
         },
         "base": {
-          "physical_coherence": 3.5,
-          "prose_control": 3.5,
-          "sensory_concreteness": 3,
-          "constraint_adherence": 4.5
+          "physical_coherence": 2.5,
+          "prose_control": 1.5,
+          "sensory_concreteness": 1.5,
+          "constraint_adherence": 1
         }
       },
       "trial_preferences": [
@@ -128,8 +82,71 @@
         "finetuned"
       ],
       "reasons": [
-        "The left response demonstrates a more nuanced and detailed physical coherence, with specific actions and movements that create a sense of realism. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Additionally, the sensory details are more vivid and grounded in the scene.",
-        "The RIGHT response demonstrates a more nuanced and precise handling of physical space, with a clear distinction between the objects being packed and those left behind. The writing is also more controlled in its use of language, avoiding clich\u00e9s and generic filler. Additionally, the sensory details are more vivid and specific, effectively grounding the reader in the scene."
+        "Left demonstrates superior physical coherence and sensory concreteness (e.g., fork taps against plate) compared to Right's generic script format. Both responses failed the core constraint by explicitly annotating subtext rather than letting it remain implicit, but Left maintains better narrative immersion.",
+        "LEFT uses a script format with generic stage directions and lacks sensory detail (e.g., 'cozy dining room'), while RIGHT employs specific physical imagery ('silver against porcelain', 'liquid calm') that enhances immersion. Both responses violate the constraint to avoid explicit subtext narration via meta-commentary blocks, but RIGHT's narrative prose is significantly more concrete and physically coherent."
+      ],
+      "valid_trials": 2,
+      "attempted_trials": 2,
+      "failures": []
+    },
+    "p3_chase_uneven_terrain": {
+      "prompt": "Write a foot chase across a rooftop under construction, with exposed beams and unfinished flooring. Track exact footing, balance, and near-falls for both the pursuer and the pursued. Avoid cinematic flourish; focus on kinesthetic detail.",
+      "response_a_is": "finetuned",
+      "response_b_is": "base",
+      "mean_scores": {
+        "finetuned": {
+          "physical_coherence": 4.5,
+          "prose_control": 2,
+          "sensory_concreteness": 3.5,
+          "constraint_adherence": 4.5
+        },
+        "base": {
+          "physical_coherence": 3.5,
+          "prose_control": 2.5,
+          "sensory_concreteness": 3,
+          "constraint_adherence": 4
+        }
+      },
+      "trial_preferences": [
+        "finetuned",
+        "base"
+      ],
+      "reasons": [
+        "Left adheres strictly to the constraint of avoiding cinematic flourish by eliminating emotional adjectives and clich\u00e9s (e.g., 'desperately sought', 'eating away'), focusing instead on precise kinesthetic mechanics. It tracks exact footing, balance, and near-falls with superior specificity compared to Right's generic action verbs.",
+        "Response LEFT provides insertion-ready narrative prose that fulfills the prompt's request to write a scene without meta-labels or structural headers. While Response RIGHT offers precise mechanical details and high physical coherence, it fails Prose Control by using formatting elements (e.g., **Scene:**, **Kinesthetic Notes**) that break immersion and prevent immediate use in a manuscript."
+      ],
+      "valid_trials": 2,
+      "attempted_trials": 2,
+      "failures": []
+    },
+    "p4_quiet_introspection": {
+      "prompt": "Write a short quiet scene of a character packing a childhood bedroom into boxes after a parent's death. Ground the scene in specific physical objects and actions rather than internal monologue about grief.",
+      "response_a_is": "base",
+      "response_b_is": "finetuned",
+      "mean_scores": {
+        "base": {
+          "physical_coherence": 2,
+          "prose_control": 3,
+          "sensory_concreteness": 4,
+          "constraint_adherence": 2
+        },
+        "finetuned": {
+          "physical_coherence": 5,
+          "prose_control": 4,
+          "sensory_concreteness": 5,
+          "constraint_adherence": 5
+        }
+      },
+      "trial_preferences": [
+        "finetuned"
+      ],
+      "reasons": [
+        "LEFT fails physical coherence by contradicting itself regarding box labels (Antiques vs Special Keepsakes) and violates the constraint to avoid internal monologue by describing memories flooding her mind. RIGHT demonstrates superior grounding in specific actions (hammering nails, sandpaper dust) without emotional exposition or meta-commentary."
+      ],
+      "valid_trials": 1,
+      "attempted_trials": 2,
+      "failures": [
+        "Judge failed after 3 attempts: Judge returned invalid JSON: Expecting value: line 1 column 1 (char 0)"
       ]
     },
     "p5_negotiation_standoff": {
@@ -138,30 +155,33 @@
       "response_b_is": "finetuned",
       "mean_scores": {
         "base": {
-          "physical_coherence": 3.5,
-          "prose_control": 4.5,
-          "sensory_concreteness": 4.5,
-          "constraint_adherence": 4.5
+          "physical_coherence": 4,
+          "prose_control": 3,
+          "sensory_concreteness": 3,
+          "constraint_adherence": 5
         },
         "finetuned": {
-          "physical_coherence": 4,
-          "prose_control": 4.5,
-          "sensory_concreteness": 4.5,
-          "constraint_adherence": 4.5
+          "physical_coherence": 5,
+          "prose_control": 2,
+          "sensory_concreteness": 4,
+          "constraint_adherence": 3
         }
       },
       "trial_preferences": [
-        "base",
-        "finetuned"
+        "base"
       ],
       "reasons": [
-        "The LEFT response demonstrates superior physical coherence, with more precise and detailed descriptions of hand positions and movements. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Sensory concreteness is equally impressive in both responses, but the LEFT response excels in its ability to convey tension and atmosphere through specific details.",
-        "The LEFT response demonstrates a more nuanced and detailed physical environment, with specific attention to hand positions, objects between the characters, and sensory details. The prose is also more controlled, avoiding clich\u00e9s and generic filler."
+        "Response RIGHT includes meta-labels (SCENE SKELETON) and analytical commentary at the end which violates the instruction to avoid explicit explanation where quality should be demonstrated implicitly. It is not insertion-ready prose but rather an outline document with analysis, whereas Response LEFT delivers functional narrative text that adheres strictly to the prompt's constraints on standoff dynamics."
+      ],
+      "valid_trials": 1,
+      "attempted_trials": 2,
+      "failures": [
+        "Judge failed after 3 attempts: Judge returned invalid JSON: Expecting value: line 1 column 1 (char 0)"
       ]
     }
   },
   "metadata": {
-    "judge_model": "llama3.1",
+    "judge_model": "qwen3.5:4b",
     "trials_per_prompt": 2
   },
   "raw_judgments": {
@@ -172,22 +192,23 @@
           "A",
           "B"
         ],
+        "status": "valid",
         "scores": {
           "A": {
+            "physical_coherence": 3,
+            "prose_control": 2,
+            "sensory_concreteness": 2,
+            "constraint_adherence": 2
+          },
+          "B": {
             "physical_coherence": 5,
             "prose_control": 5,
             "sensory_concreteness": 5,
             "constraint_adherence": 5
-          },
-          "B": {
-            "physical_coherence": 4,
-            "prose_control": 3,
-            "sensory_concreteness": 4,
-            "constraint_adherence": 4
           }
         },
-        "preference": "A",
-        "reason": "The LEFT response demonstrates a more nuanced and detailed physical description of the characters' movements within the cramped elevator, effectively conveying the tension and constraint. The RIGHT response relies on more generic descriptions and lacks the same level of sensory detail."
+        "preference": "B",
+        "reason": "RIGHT adheres strictly to the constraint of avoiding metaphors and using precise spatial description (e.g., specific angles, distances), whereas LEFT relies on clich\u00e9d abstract language ('air grew thick', 'fragile thread'). RIGHT demonstrates superior physical coherence through measurable movement details that respect elevator constraints."
       },
       {
         "trial": 2,
@@ -195,22 +216,23 @@
           "B",
           "A"
         ],
+        "status": "valid",
         "scores": {
           "B": {
-            "physical_coherence": 4,
-            "prose_control": 5,
+            "physical_coherence": 5,
+            "prose_control": 4,
             "sensory_concreteness": 5,
             "constraint_adherence": 5
           },
           "A": {
-            "physical_coherence": 5,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
+            "physical_coherence": 2,
+            "prose_control": 3,
+            "sensory_concreteness": 2,
+            "constraint_adherence": 1
           }
         },
-        "preference": "A",
-        "reason": "The RIGHT response demonstrates a more nuanced and detailed understanding of the physical constraints of the elevator space. The description of Alex's movements and Maya's positioning is more precise and immersive, creating a stronger sense of tension and confinement."
+        "preference": "B",
+        "reason": "Left adheres strictly to spatial constraints with precise measurements (e.g., 'eight centimeters', 'twelve degrees') and avoids clich\u00e9s throughout the scene. Right fails physical logic by describing pacing in a stopped elevator, uses pervasive metaphors ('eyes snapped', 'air grew thick'), and lacks specific sensory detail."
       }
     ],
     "p2_subtext_dialogue": [
@@ -220,22 +242,23 @@
           "A",
           "B"
         ],
+        "status": "valid",
         "scores": {
           "A": {
             "physical_coherence": 4,
             "prose_control": 3,
-            "sensory_concreteness": 2,
-            "constraint_adherence": 5
+            "sensory_concreteness": 4,
+            "constraint_adherence": 2
           },
           "B": {
-            "physical_coherence": 5,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
+            "physical_coherence": 2,
+            "prose_control": 1,
+            "sensory_concreteness": 2,
+            "constraint_adherence": 1
           }
         },
-        "preference": "B",
-        "reason": "The RIGHT response demonstrates a more nuanced understanding of subtext and uses specific, grounded sensory details to convey the underlying emotions. The physical setting is vividly described, and the character descriptions are concise yet evocative. The conversation itself is a masterclass in subtle implication, with each line building on the previous one to create a rich tapestry of unspoken meaning."
+        "preference": "A",
+        "reason": "Left demonstrates superior physical coherence and sensory concreteness (e.g., fork taps against plate) compared to Right's generic script format. Both responses failed the core constraint by explicitly annotating subtext rather than letting it remain implicit, but Left maintains better narrative immersion."
       },
       {
         "trial": 2,
@@ -243,22 +266,23 @@
           "B",
           "A"
         ],
+        "status": "valid",
         "scores": {
           "B": {
-            "physical_coherence": 5,
-            "prose_control": 4,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
-          },
-          "A": {
             "physical_coherence": 3,
             "prose_control": 2,
+            "sensory_concreteness": 1,
+            "constraint_adherence": 1
+          },
+          "A": {
+            "physical_coherence": 4.5,
+            "prose_control": 3.5,
             "sensory_concreteness": 4,
-            "constraint_adherence": 4
+            "constraint_adherence": 2
           }
         },
-        "preference": "B",
-        "reason": "The LEFT response demonstrates a more nuanced and subtle exploration of subtext, with each line building on the previous one to create a rich tapestry of unspoken meanings. The use of specific sensory details (e.g., 'the scent is clean laundry, slightly burnt dinner') and physical descriptions (e.g., 'posture slightly guarded, hands busy folding the napkin into precise squares') adds depth and concreteness to the narrative. In contrast, the RIGHT response relies on more generic language and clich\u00e9s ('shadows on a moonlit night', 'unspoken accusations and unexpressed fears swirled beneath the surface'), which detract from its overall impact."
+        "preference": "A",
+        "reason": "LEFT uses a script format with generic stage directions and lacks sensory detail (e.g., 'cozy dining room'), while RIGHT employs specific physical imagery ('silver against porcelain', 'liquid calm') that enhances immersion. Both responses violate the constraint to avoid explicit subtext narration via meta-commentary blocks, but RIGHT's narrative prose is significantly more concrete and physically coherent."
       }
     ],
     "p3_chase_uneven_terrain": [
@@ -268,22 +292,23 @@
           "A",
           "B"
         ],
+        "status": "valid",
         "scores": {
           "A": {
-            "physical_coherence": 5,
-            "prose_control": 4.5,
+            "physical_coherence": 4,
+            "prose_control": 3,
             "sensory_concreteness": 5,
             "constraint_adherence": 5
           },
           "B": {
-            "physical_coherence": 4,
-            "prose_control": 3.5,
+            "physical_coherence": 3,
+            "prose_control": 2,
             "sensory_concreteness": 4,
-            "constraint_adherence": 4
+            "constraint_adherence": 3
           }
         },
         "preference": "A",
-        "reason": "The LEFT response demonstrates superior physical coherence, with a more nuanced and detailed portrayal of the characters' movements and balance. The sensory concreteness is also more vivid and immersive, effectively conveying the sights, sounds, and textures of the rooftop environment."
+        "reason": "Left adheres strictly to the constraint of avoiding cinematic flourish by eliminating emotional adjectives and clich\u00e9s (e.g., 'desperately sought', 'eating away'), focusing instead on precise kinesthetic mechanics. It tracks exact footing, balance, and near-falls with superior specificity compared to Right's generic action verbs."
       },
       {
         "trial": 2,
@@ -291,22 +316,23 @@
           "B",
           "A"
         ],
+        "status": "valid",
         "scores": {
           "B": {
-            "physical_coherence": 5,
-            "prose_control": 4.5,
-            "sensory_concreteness": 5,
+            "physical_coherence": 4,
+            "prose_control": 3,
+            "sensory_concreteness": 2,
             "constraint_adherence": 5
           },
           "A": {
-            "physical_coherence": 3.5,
-            "prose_control": 2.5,
-            "sensory_concreteness": 3,
+            "physical_coherence": 5,
+            "prose_control": 1,
+            "sensory_concreteness": 2,
             "constraint_adherence": 4
           }
         },
         "preference": "B",
-        "reason": "The LEFT response demonstrates superior physical coherence, with a more nuanced and detailed depiction of the rooftop environment and the characters' movements. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Sensory concreteness is equally impressive in both responses, but the LEFT response excels in this area as well."
+        "reason": "Response LEFT provides insertion-ready narrative prose that fulfills the prompt's request to write a scene without meta-labels or structural headers. While Response RIGHT offers precise mechanical details and high physical coherence, it fails Prose Control by using formatting elements (e.g., **Scene:**, **Kinesthetic Notes**) that break immersion and prevent immediate use in a manuscript."
       }
     ],
     "p4_quiet_introspection": [
@@ -316,22 +342,23 @@
           "A",
           "B"
         ],
+        "status": "valid",
         "scores": {
           "A": {
-            "physical_coherence": 5,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
-          },
-          "B": {
-            "physical_coherence": 4,
+            "physical_coherence": 2,
             "prose_control": 3,
             "sensory_concreteness": 4,
-            "constraint_adherence": 4
+            "constraint_adherence": 2
+          },
+          "B": {
+            "physical_coherence": 5,
+            "prose_control": 4,
+            "sensory_concreteness": 5,
+            "constraint_adherence": 5
           }
         },
-        "preference": "A",
-        "reason": "The left response demonstrates a more nuanced and detailed physical coherence, with specific actions and movements that create a sense of realism. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Additionally, the sensory details are more vivid and grounded in the scene."
+        "preference": "B",
+        "reason": "LEFT fails physical coherence by contradicting itself regarding box labels (Antiques vs Special Keepsakes) and violates the constraint to avoid internal monologue by describing memories flooding her mind. RIGHT demonstrates superior grounding in specific actions (hammering nails, sandpaper dust) without emotional exposition or meta-commentary."
       },
       {
         "trial": 2,
@@ -339,22 +366,8 @@
           "B",
           "A"
         ],
-        "scores": {
-          "B": {
-            "physical_coherence": 3,
-            "prose_control": 4,
-            "sensory_concreteness": 2,
-            "constraint_adherence": 5
-          },
-          "A": {
-            "physical_coherence": 5,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
-          }
-        },
-        "preference": "A",
-        "reason": "The RIGHT response demonstrates a more nuanced and precise handling of physical space, with a clear distinction between the objects being packed and those left behind. The writing is also more controlled in its use of language, avoiding clich\u00e9s and generic filler. Additionally, the sensory details are more vivid and specific, effectively grounding the reader in the scene."
+        "status": "failed",
+        "error": "Judge failed after 3 attempts: Judge returned invalid JSON: Expecting value: line 1 column 1 (char 0)"
       }
     ],
     "p5_negotiation_standoff": [
@@ -364,22 +377,23 @@
           "A",
           "B"
         ],
+        "status": "valid",
         "scores": {
           "A": {
             "physical_coherence": 4,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
+            "prose_control": 3,
+            "sensory_concreteness": 3,
             "constraint_adherence": 5
           },
           "B": {
-            "physical_coherence": 3,
-            "prose_control": 4,
+            "physical_coherence": 5,
+            "prose_control": 2,
             "sensory_concreteness": 4,
-            "constraint_adherence": 4
+            "constraint_adherence": 3
           }
         },
         "preference": "A",
-        "reason": "The LEFT response demonstrates superior physical coherence, with more precise and detailed descriptions of hand positions and movements. The prose is also more controlled, avoiding clich\u00e9s and generic filler. Sensory concreteness is equally impressive in both responses, but the LEFT response excels in its ability to convey tension and atmosphere through specific details."
+        "reason": "Response RIGHT includes meta-labels (SCENE SKELETON) and analytical commentary at the end which violates the instruction to avoid explicit explanation where quality should be demonstrated implicitly. It is not insertion-ready prose but rather an outline document with analysis, whereas Response LEFT delivers functional narrative text that adheres strictly to the prompt's constraints on standoff dynamics."
       },
       {
         "trial": 2,
@@ -387,22 +401,8 @@
           "B",
           "A"
         ],
-        "scores": {
-          "B": {
-            "physical_coherence": 5,
-            "prose_control": 5,
-            "sensory_concreteness": 5,
-            "constraint_adherence": 5
-          },
-          "A": {
-            "physical_coherence": 3,
-            "prose_control": 4,
-            "sensory_concreteness": 4,
-            "constraint_adherence": 4
-          }
-        },
-        "preference": "B",
-        "reason": "The LEFT response demonstrates a more nuanced and detailed physical environment, with specific attention to hand positions, objects between the characters, and sensory details. The prose is also more controlled, avoiding clich\u00e9s and generic filler."
+        "status": "failed",
+        "error": "Judge failed after 3 attempts: Judge returned invalid JSON: Expecting value: line 1 column 1 (char 0)"
       }
     ]
   }
