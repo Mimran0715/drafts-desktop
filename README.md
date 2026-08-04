@@ -2,6 +2,8 @@
 <h2 align="center">Your Local AI Writing Companion</h2>
 
 Drafts is a local-first desktop writing application with an AI companion for drafting, revising, searching project notes, and reviewing in-progress work.
+
+
 Built with Electron, React, TypeScript, Vite, LangChain, LangGraph, Ollama, ChromaDB, and SQLite.
 
 ## Features
