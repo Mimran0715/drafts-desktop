@@ -40,8 +40,8 @@ const { startChromaServer, stopChromaServer } = require('./agent/chromaServer.js
 const db = require('./database.js');
 
 let mainWindow;
-const DEFAULT_OLLAMA_MODEL = 'llama3.1';
-const SUPPORTED_OLLAMA_MODELS = ['llama3.1', 'llama3.2'];
+const DEFAULT_OLLAMA_MODEL = 'llama-writer';
+const SUPPORTED_OLLAMA_MODELS = ['llama-writer', 'llama3.1'];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -310,7 +310,7 @@ ipcMain.handle('chat', async (event, message, context) => {
     
     if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
       return {
-        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. Try running 'ollama pull llama3.1' to download the model",
+        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The 'llama-writer' model is available in Ollama",
         timestamp: new Date(),
       };
     }
@@ -365,7 +365,7 @@ ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
     
     if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
       return {
-        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. Try running 'ollama pull llama3.1' to download the model",
+        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The 'llama-writer' model is available in Ollama",
         timestamp: new Date(),
       };
     }
@@ -388,7 +388,9 @@ ipcMain.handle('get-ollama-models', async () => {
     const installedModels = Array.isArray(data.models)
       ? data.models.map(model => model.name).filter(Boolean)
       : [];
-    const models = SUPPORTED_OLLAMA_MODELS.filter(model => installedModels.includes(model));
+    const models = SUPPORTED_OLLAMA_MODELS.filter(model => (
+      installedModels.some(installed => installed === model || installed === `${model}:latest`)
+    ));
 
     return models.length > 0 ? models : SUPPORTED_OLLAMA_MODELS;
   } catch (error) {

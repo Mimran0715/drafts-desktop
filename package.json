@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "chroma": "node node_modules/chromadb/dist/cli.mjs run --path ./chroma-data",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "eval:judge": "python3 eval/auto_evaluate.py"
   },
   "dependencies": {
     "@langchain/core": "^1.1.8",

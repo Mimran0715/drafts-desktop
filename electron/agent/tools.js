@@ -8,7 +8,7 @@ const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
 const { searchWithChroma } = require('./vectorStore');
 
-const MODEL = "llama3.1";
+const MODEL = "llama-writer";
 const modelCache = new Map();
 
 function getModel(modelName = MODEL) {

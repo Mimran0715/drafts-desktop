@@ -42,7 +42,7 @@ async function runAgent(params) {
   console.log('Active Document:', activeDocumentPath);
   console.log('Thread:', thread);
   console.log('Message:', message);
-  console.log('Model:', modelName || 'llama3.1');
+  console.log('Model:', modelName || 'llama-writer');
   console.log('Live Content:', liveContent ? 'Yes' : 'No');
   console.log('='.repeat(60) + '\n');
   
@@ -56,7 +56,7 @@ async function runAgent(params) {
       messages: [new HumanMessage(message)],
       liveContent: liveContent, // Pass live content to tools
       ragEnabled: !!ragEnabled,
-      modelName: modelName || 'llama3.1',
+      modelName: modelName || 'llama-writer',
       streamWriter: typeof onToken === 'function' ? onToken : null
     };
     

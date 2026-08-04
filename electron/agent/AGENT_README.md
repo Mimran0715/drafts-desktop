@@ -252,7 +252,7 @@ Make sure these are in your `package.json`:
 ## ✅ Testing Checklist
 
 - [ ] Ollama is running (`ollama serve`)
-- [ ] Model is downloaded (`ollama pull llama3.1`)
+- [ ] Fine-tuned model is available (`ollama list` includes `llama-writer`)
 - [ ] Project folder selected
 - [ ] Documents load correctly
 - [ ] Agent responds to questions
