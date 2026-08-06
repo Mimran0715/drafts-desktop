@@ -1,4 +1,4 @@
-// electron/agent/state.js
+// electron/ai/state.js
 
 /**
  * AgentState interface definition

@@ -1,4 +1,4 @@
-// electron/agent/index.js
+// electron/ai/index.js
 // Main entry point for the agent
 
 const { HumanMessage } = require('@langchain/core/messages');

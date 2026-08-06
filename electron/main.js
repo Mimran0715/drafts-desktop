@@ -34,9 +34,9 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(path.join(__dirname, '../.env'));
 
-const { runAgent } = require('./agent/index.js');
-const { getChromaStatus } = require('./agent/vectorStore.js');
-const { startChromaServer, stopChromaServer } = require('./agent/chromaServer.js');
+const { runAgent } = require('./ai/index.js');
+const { getChromaStatus } = require('./ai/vectorStore.js');
+const { startChromaServer, stopChromaServer } = require('./ai/chromaServer.js');
 const db = require('./database.js');
 
 let mainWindow;

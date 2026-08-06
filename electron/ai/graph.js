@@ -1,4 +1,4 @@
-// electron/agent/graph.js
+// electron/ai/graph.js
 // Agent workflow graph: orchestrates the multi-node flow
 
 const { StateGraph, Annotation, START, END } = require('@langchain/langgraph');

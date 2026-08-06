@@ -24,7 +24,7 @@ Built with Electron, React, TypeScript, Vite, LangChain, LangGraph, Ollama, Chro
 
 ## Agent Workflow
 
-The Electron main process exposes chat through IPC and runs a LangGraph state graph in `electron/agent`:
+The Electron main process exposes chat through IPC and runs a LangGraph state graph in `electron/ai`:
 
 ```text
 user message

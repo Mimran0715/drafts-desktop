@@ -1,4 +1,4 @@
-// electron/agent/tools.js
+// electron/ai/tools.js
 // Agent tools for searching, analyzing, and generating content
 
 const fs = require('fs').promises;

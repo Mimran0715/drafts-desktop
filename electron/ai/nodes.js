@@ -1,4 +1,4 @@
-// electron/agent/nodes.js
+// electron/ai/nodes.js
 // Multi-node agent architecture: understand → execute → respond
 
 const { ChatOllama } = require('@langchain/ollama');

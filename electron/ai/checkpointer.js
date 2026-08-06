@@ -1,4 +1,4 @@
-// electron/agent/checkpointer.js
+// electron/ai/checkpointer.js
 // SQLite-based checkpointer for conversation state management
 
 const { getDatabase } = require('../database.js');
