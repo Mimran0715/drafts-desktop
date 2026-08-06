@@ -84,6 +84,18 @@ function getFolderName(folderPath: string) {
 function cleanSuggestionForEditor(suggestion: string) {
   return suggestion
     .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*\*\*\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*\*\*\s*:\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*/i,
+      ''
+    )
+    .replace(
       /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
       ''
     )
@@ -626,7 +638,11 @@ function AppContent() {
         msg.id === agentMessageId
           ? {
               ...msg,
-              content: hasStreamedContent ? msg.content : response.response || "I'm here to help with your writing!",
+              content: response.generatedText
+                ? response.response || "I drafted a suggestion in the editor."
+                : hasStreamedContent
+                  ? msg.content
+                  : response.response || "I'm here to help with your writing!",
               hasGeneratedText: !!response.generatedText,
               isStreaming: false
             }

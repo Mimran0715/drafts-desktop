@@ -39,7 +39,7 @@ function chunkContentToText(content) {
 
 function splitGeneratedWriting(generatedText = '') {
   const text = stripGeneratedLeadIn(String(generatedText).trim());
-  const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
+  const separatorMatch = text.match(/(?:^|\r?\n)\s*(?:\*\*)?\s*---+\s*(?:\*\*)?\s*(?:\r?\n|$)/);
 
   if (separatorMatch?.index !== undefined) {
     const separatorStart = separatorMatch.index;
@@ -51,6 +51,18 @@ function splitGeneratedWriting(generatedText = '') {
 
 function stripGeneratedLeadIn(text = '') {
   return String(text)
+    .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*\*\*\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*\*\*\s*:\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*/i,
+      ''
+    )
     .replace(
       /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
       ''
@@ -489,18 +501,18 @@ Output format is required:
 2. Then write a standalone separator line containing exactly three hyphens: ---
 3. After the separator, write any brief note, explanation, or question for the user.
 
-Do not put commentary, explanation, greetings, labels, or questions before the separator. Do not start with phrases like "Here is a continuation of the story" or "Here's a draft". The text before --- must be ready to insert directly into the draft.`;
+Do not put commentary, explanation, greetings, labels, or questions before the separator. Do not write labels like "Output:", "Suggestion:", "Draft:", or "Note:" anywhere. Do not explain that the output is meant for the editor. Do not start with phrases like "Here is a continuation of the story" or "Here's a draft". The text before --- must be ready to insert directly into the draft.`;
 
   try {
     let generated = await invokeModel([
-      { role: 'system', content: 'You are a creative writing assistant helping to generate and expand content.' },
+      { role: 'system', content: 'You generate insertion-ready prose for a writing editor. Follow the requested output format exactly.' },
       { role: 'user', content: prompt }
     ], options);
 
     if (isDuplicateSuggestion(generated, suggestionContext)) {
       console.log('🔁 Model repeated a previous suggestion; requesting an alternate');
       generated = await invokeModel([
-        { role: 'system', content: 'You are a creative writing assistant helping to generate and expand content.' },
+        { role: 'system', content: 'You generate insertion-ready prose for a writing editor. Follow the requested output format exactly.' },
         {
           role: 'user',
           content: `${prompt}\n\nThe previous response matched a suggestion the user has already seen or rejected. Generate a new alternative with a different opening, different events, and different phrasing while still fitting the draft.`

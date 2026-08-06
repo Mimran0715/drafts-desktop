@@ -136,7 +136,7 @@ function formatRagContext(searchResults) {
 
 function splitGeneratedWriting(generatedText = '') {
   const text = stripGeneratedLeadIn(String(generatedText).trim());
-  const separatorMatch = text.match(/(?:^|\r?\n)\s*---+\s*(?:\r?\n|$)/);
+  const separatorMatch = text.match(/(?:^|\r?\n)\s*(?:\*\*)?\s*---+\s*(?:\*\*)?\s*(?:\r?\n|$)/);
 
   if (separatorMatch?.index !== undefined) {
     const separatorStart = separatorMatch.index;
@@ -144,7 +144,7 @@ function splitGeneratedWriting(generatedText = '') {
 
     return {
       writing: text.slice(0, separatorStart).trim(),
-      note: text.slice(separatorEnd).trim()
+      note: cleanGeneratedNote(text.slice(separatorEnd).trim())
     };
   }
 
@@ -152,7 +152,7 @@ function splitGeneratedWriting(generatedText = '') {
   if (commentaryMatch?.index !== undefined) {
     return {
       writing: text.slice(0, commentaryMatch.index).trim(),
-      note: text.slice(commentaryMatch.index).trim()
+      note: cleanGeneratedNote(text.slice(commentaryMatch.index).trim())
     };
   }
 
@@ -165,10 +165,38 @@ function splitGeneratedWriting(generatedText = '') {
 function stripGeneratedLeadIn(text = '') {
   return String(text)
     .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*\*\*\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*\*\*\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*\*\*\s*:\s*/i,
+      ''
+    )
+    .replace(
+      /^\s*(?:output|generated output|editor output|draft output|draft text|suggestion|generated text|editor suggestion|in-editor suggestion)\s*:\s*/i,
+      ''
+    )
+    .replace(
       /^\s*(?:here(?:'s| is)|this is|i(?:'ve| have) written)\s+(?:a\s+)?(?:continuation|draft|scene|passage)(?:\s+of\s+the\s+story)?\s*[:.-]\s*/i,
       ''
     )
     .trim();
+}
+
+function cleanGeneratedNote(note = '') {
+  const cleaned = String(note)
+    .replace(/^\s*(?:note|commentary|explanation)\s*:\s*/i, '')
+    .trim();
+
+  if (!cleaned) return '';
+
+  const lower = cleaned.toLowerCase();
+  const isRoutingNote =
+    /\b(?:output|text|suggestion|response)\b/.test(lower) &&
+    /\b(?:meant|intended|for|goes|belongs|inserted|shown)\b/.test(lower) &&
+    /\b(?:text editor|editor|suggestion box|in-text editor|in text editor)\b/.test(lower);
+
+  return isRoutingNote ? '' : cleaned;
 }
 
 /**
@@ -380,14 +408,11 @@ const respondNode = traceable(async function respondNode(state) {
   // Check if we have generated text - if so, return it directly with minimal wrapper
   if (state.gatheredInfo.generated && state.gatheredInfo.generated.success) {
     const gen = state.gatheredInfo.generated;
-    const { writing, note } = splitGeneratedWriting(gen.generated);
+    const { writing } = splitGeneratedWriting(gen.generated);
     
     console.log('✅ Returning generated text for editor insertion');
     
-    // Return a brief explanation + the generated text
-    const response = note
-      ? `I'll continue your story from where you left off. The suggested text is ready above the editor.\n\n${note}`
-      : `I'll continue your story from where you left off. The suggested text is ready above the editor.`;
+    const response = `I'll continue your story from where you left off. The suggested text is ready above the editor.`;
     if (state.streamWriter) {
       state.streamWriter(response);
     }
