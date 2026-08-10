@@ -1,24 +1,30 @@
 /* global require, module, process */
 const crypto = require('crypto');
 const { ChromaClient } = require('chromadb');
+const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 
 const CHROMA_HOST = process.env.CHROMA_HOST || 'localhost';
 const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8000);
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 
-const HASH_EMBEDDING_DIMENSIONS = 512;
-const TARGET_CHUNK_SIZE = 1000;
-const MIN_CHUNK_SIZE = 350;
-const MAX_CHUNK_SIZE = 1500;
+const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 180;
 const EMBED_CONCURRENCY = 4;
 const INDEX_BATCH_SIZE = 100;
 const DEFAULT_RESULTS = 6;
 
 const indexCache = new Map();
-let embeddingMode = null;
-let embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
+let embeddingDimensions = null;
+
+const textSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: CHUNK_SIZE,
+  chunkOverlap: CHUNK_OVERLAP,
+  keepSeparator: true,
+  // Prefer boundaries that preserve writing structure before falling back to
+  // sentence punctuation, words, and finally individual characters.
+  separators: ['\n\n', '\n', '. ', '? ', '! ', '; ', ', ', ' ', ''],
+});
 
 function hashText(text) {
   return crypto.createHash('sha256').update(String(text)).digest('hex');
@@ -35,23 +41,6 @@ function createClient() {
 
 function tokenize(text) {
   return String(text).toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'_-]*/gu) || [];
-}
-
-function embedTextWithHash(text) {
-  const vector = new Array(HASH_EMBEDDING_DIMENSIONS).fill(0);
-  const tokens = tokenize(text);
-
-  // Signed feature hashing over words and adjacent word pairs preserves more
-  // local meaning than the legacy unigram-only fallback.
-  const features = tokens.concat(tokens.slice(0, -1).map((token, i) => `${token} ${tokens[i + 1]}`));
-  for (const feature of features) {
-    const digest = crypto.createHash('sha256').update(feature).digest();
-    const index = digest.readUInt32BE(0) % HASH_EMBEDDING_DIMENSIONS;
-    vector[index] += digest[4] & 1 ? -1 : 1;
-  }
-
-  const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
-  return magnitude ? vector.map(value => value / magnitude) : vector;
 }
 
 async function embedTextWithOllama(text) {
@@ -75,20 +64,6 @@ async function embedTextWithOllama(text) {
   return data.embedding;
 }
 
-async function resolveEmbeddingMode(forceRefresh = false) {
-  if (embeddingMode && !forceRefresh) return embeddingMode;
-
-  try {
-    await embedTextWithOllama('drafts retrieval probe');
-    embeddingMode = 'ollama';
-  } catch (error) {
-    console.warn(`Ollama embeddings unavailable (${OLLAMA_EMBED_MODEL}), using hash fallback:`, error.message);
-    embeddingMode = 'hash';
-    embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
-  }
-  return embeddingMode;
-}
-
 async function mapConcurrent(items, mapper, concurrency = EMBED_CONCURRENCY) {
   const output = new Array(items.length);
   let cursor = 0;
@@ -104,125 +79,44 @@ async function mapConcurrent(items, mapper, concurrency = EMBED_CONCURRENCY) {
   return output;
 }
 
-async function embedTexts(texts, requestedMode) {
-  if (requestedMode === 'hash') return texts.map(embedTextWithHash);
+async function embedTexts(texts) {
   return mapConcurrent(texts, embedTextWithOllama);
 }
 
-function lineNumberAt(text, offset) {
-  let line = 1;
-  for (let i = 0; i < offset; i += 1) if (text.charCodeAt(i) === 10) line += 1;
-  return line;
-}
-
-function splitOversizedUnit(unit) {
-  if (unit.text.length <= MAX_CHUNK_SIZE) return [unit];
-
-  const sentences = unit.text.match(/[^.!?\n]+(?:[.!?]+["')\]]*|$)/g) || [unit.text];
-  const pieces = [];
-  let text = '';
-  let offset = unit.start;
-
-  for (const sentence of sentences) {
-    if (text && text.length + sentence.length > TARGET_CHUNK_SIZE) {
-      pieces.push({ text: text.trim(), start: offset });
-      offset += text.length;
-      text = '';
-    }
-
-    if (sentence.length > MAX_CHUNK_SIZE) {
-      for (let i = 0; i < sentence.length; i += TARGET_CHUNK_SIZE) {
-        const part = sentence.slice(i, i + TARGET_CHUNK_SIZE).trim();
-        if (part) pieces.push({ text: part, start: offset + i });
-      }
-      offset += sentence.length;
-    } else {
-      text += sentence;
-    }
-  }
-
-  if (text.trim()) pieces.push({ text: text.trim(), start: offset });
-  return pieces;
-}
-
-function structuralUnits(text) {
-  const units = [];
-  const blockPattern = /(?:^|\n)([^\n][\s\S]*?)(?=\n\s*\n|$)/g;
-  let match;
-
-  while ((match = blockPattern.exec(text)) !== null) {
-    const raw = match[1];
-    const leading = raw.length - raw.trimStart().length;
-    const value = raw.trim();
-    if (value) units.push(...splitOversizedUnit({ text: value, start: match.index + leading }));
-    if (match[0].length === 0) blockPattern.lastIndex += 1;
-  }
-
-  return units;
-}
-
-function chunkText(input) {
+async function chunkText(input) {
   const text = String(input || '').replace(/\r\n?/g, '\n').trim();
   if (!text) return [];
 
-  const units = structuralUnits(text);
-  const chunks = [];
-  let current = [];
-  let currentLength = 0;
-
-  function flush() {
-    if (!current.length) return;
-    const content = current.map(unit => unit.text).join('\n\n').trim();
-    chunks.push({
-      content,
-      startLine: lineNumberAt(text, current[0].start),
-      endLine: lineNumberAt(text, current[current.length - 1].start + current[current.length - 1].text.length),
-    });
-
-    // Reuse complete trailing semantic units for overlap; never cut a word.
-    const overlap = [];
-    let overlapLength = 0;
-    for (let i = current.length - 1; i >= 0; i -= 1) {
-      if (overlapLength && overlapLength + current[i].text.length > CHUNK_OVERLAP) break;
-      overlap.unshift(current[i]);
-      overlapLength += current[i].text.length;
-      if (overlapLength >= CHUNK_OVERLAP) break;
-    }
-    current = overlap.length === current.length ? [] : overlap;
-    currentLength = current.reduce((sum, unit) => sum + unit.text.length + 2, 0);
-  }
-
-  for (const unit of units) {
-    const projected = currentLength + unit.text.length + (current.length ? 2 : 0);
-    const headingBoundary = /^#{1,6}\s|^[A-Z][^.!?]{0,80}:$/.test(unit.text.split('\n', 1)[0]);
-    if (current.length && projected > MAX_CHUNK_SIZE) flush();
-    else if (currentLength >= MIN_CHUNK_SIZE && headingBoundary) flush();
-    else if (currentLength >= TARGET_CHUNK_SIZE && projected > TARGET_CHUNK_SIZE) flush();
-    current.push(unit);
-    currentLength += unit.text.length + (current.length > 1 ? 2 : 0);
-  }
-  flush();
-  return chunks;
+  const splitDocuments = await textSplitter.createDocuments([text]);
+  return splitDocuments.map(document => ({
+    content: document.pageContent.trim(),
+    startLine: document.metadata.loc?.lines?.from || 1,
+    endLine: document.metadata.loc?.lines?.to || document.metadata.loc?.lines?.from || 1,
+  }));
 }
 
-function buildChunks(documents) {
-  return documents.flatMap(doc => chunkText(doc.content).map((chunk, index) => ({
-    id: hashText(`${doc.path}:${chunk.startLine}:${chunk.content}`).slice(0, 40),
-    content: chunk.content,
-    metadata: {
-      documentName: doc.name,
-      documentPath: doc.path,
-      chunkIndex: index,
-      startLine: chunk.startLine,
-      endLine: chunk.endLine,
-      isLive: !!doc.isLive,
-    },
-  })));
+async function buildChunks(documents) {
+  const chunksByDocument = await Promise.all(documents.map(async doc => {
+    const chunks = await chunkText(doc.content);
+    return chunks.map((chunk, index) => ({
+      id: hashText(`${doc.path}:${chunk.startLine}:${chunk.content}`).slice(0, 40),
+      content: chunk.content,
+      metadata: {
+        documentName: doc.name,
+        documentPath: doc.path,
+        chunkIndex: index,
+        startLine: chunk.startLine,
+        endLine: chunk.endLine,
+        isLive: !!doc.isLive,
+      },
+    }));
+  }));
+  return chunksByDocument.flat();
 }
 
-function computeFingerprint(documents, mode) {
+function computeFingerprint(documents) {
   const payload = documents.map(doc => `${doc.path}:${hashText(doc.content || '')}`).sort().join('|');
-  return hashText(`rag-v2:${mode}:${payload}`);
+  return hashText(`rag-v4-langchain-splitter:${OLLAMA_EMBED_MODEL}:${payload}`);
 }
 
 async function addInBatches(collection, chunks, embeddings) {
@@ -237,37 +131,25 @@ async function addInBatches(collection, chunks, embeddings) {
   }
 }
 
-async function rebuildCollection(client, collectionName, chunks, mode) {
-  let actualMode = mode;
-  let embeddings;
-  try {
-    embeddings = await embedTexts(chunks.map(chunk => chunk.content), mode);
-  } catch (error) {
-    console.warn('Ollama failed while indexing; rebuilding consistently with hash embeddings:', error.message);
-    actualMode = 'hash';
-    embeddingMode = 'hash';
-    embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
-    embeddings = chunks.map(chunk => embedTextWithHash(chunk.content));
-  }
+async function rebuildCollection(client, collectionName, chunks) {
+  const embeddings = await embedTexts(chunks.map(chunk => chunk.content));
 
   try { await client.deleteCollection({ name: collectionName }); } catch { /* absent */ }
   const collection = await client.getOrCreateCollection({ name: collectionName, embeddingFunction: null });
   if (chunks.length) await addInBatches(collection, chunks, embeddings);
-  return { collection, mode: actualMode };
+  return collection;
 }
 
-async function ensureIndexedCollection(client, collectionName, projectPath, documents) {
-  const preferredMode = await resolveEmbeddingMode();
-  const fingerprint = computeFingerprint(documents, preferredMode);
+async function ensureIndexedCollection(client, collectionName, projectPath, documents, chunks) {
+  const fingerprint = computeFingerprint(documents);
   const cached = indexCache.get(projectPath);
   if (cached?.fingerprint === fingerprint && cached.collectionName === collectionName) {
-    embeddingMode = cached.mode;
-    return { collection: await client.getCollection({ name: collectionName }), mode: cached.mode };
+    return client.getCollection({ name: collectionName });
   }
 
-  const indexed = await rebuildCollection(client, collectionName, buildChunks(documents), preferredMode);
-  indexCache.set(projectPath, { fingerprint: computeFingerprint(documents, indexed.mode), collectionName, mode: indexed.mode });
-  return indexed;
+  const collection = await rebuildCollection(client, collectionName, chunks);
+  indexCache.set(projectPath, { fingerprint, collectionName });
+  return collection;
 }
 
 function lexicalScore(query, document) {
@@ -336,7 +218,7 @@ function formatResults(query, candidates) {
     query,
     resultCount: results.length,
     retrievalMode: 'chroma-hybrid',
-    embeddingMode: embeddingMode || 'hash',
+    embeddingMode: 'ollama',
     results,
   };
 }
@@ -344,14 +226,18 @@ function formatResults(query, candidates) {
 async function searchWithChroma(query, projectPath, documents, options = {}) {
   const client = createClient();
   await client.heartbeat();
-  const chunks = buildChunks(documents);
+  const chunks = await buildChunks(documents);
   if (!chunks.length) return formatResults(query, []);
 
   const collectionName = getCollectionName(projectPath);
-  const { collection, mode } = await ensureIndexedCollection(client, collectionName, projectPath, documents);
-  const queryEmbedding = mode === 'ollama'
-    ? await embedTextWithOllama(query)
-    : embedTextWithHash(query);
+  const collection = await ensureIndexedCollection(
+    client,
+    collectionName,
+    projectPath,
+    documents,
+    chunks
+  );
+  const queryEmbedding = await embedTextWithOllama(query);
   const wanted = Math.max(1, Number(options.nResults) || DEFAULT_RESULTS);
   const result = await collection.query({
     queryEmbeddings: [queryEmbedding],
@@ -362,21 +248,37 @@ async function searchWithChroma(query, projectPath, documents, options = {}) {
 }
 
 async function getChromaStatus() {
-  await resolveEmbeddingMode();
   try {
     const client = createClient();
     await client.heartbeat();
     let version = null;
     try { version = await client.version(); } catch { /* optional */ }
+
+    try {
+      await embedTextWithOllama('drafts retrieval probe');
+    } catch (error) {
+      return {
+        available: true,
+        host: CHROMA_HOST,
+        port: CHROMA_PORT,
+        version,
+        embeddingModel: OLLAMA_EMBED_MODEL,
+        embeddingMode: 'unavailable',
+        embeddingDimensions: null,
+        embeddingError: error.message,
+        semanticSearch: false,
+      };
+    }
+
     return {
       available: true,
       host: CHROMA_HOST,
       port: CHROMA_PORT,
       version,
       embeddingModel: OLLAMA_EMBED_MODEL,
-      embeddingMode: embeddingMode || 'hash',
+      embeddingMode: 'ollama',
       embeddingDimensions,
-      semanticSearch: embeddingMode === 'ollama',
+      semanticSearch: true,
     };
   } catch (error) {
     return {
@@ -385,7 +287,7 @@ async function getChromaStatus() {
       port: CHROMA_PORT,
       error: error.message,
       embeddingModel: OLLAMA_EMBED_MODEL,
-      embeddingMode: embeddingMode || 'hash',
+      embeddingMode: 'unavailable',
       embeddingDimensions,
       semanticSearch: false,
     };
