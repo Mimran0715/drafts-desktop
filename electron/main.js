@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fsSync = require('fs');
@@ -40,7 +41,8 @@ const { startChromaServer, stopChromaServer } = require('./ai/chromaServer.js');
 const db = require('./database.js');
 
 let mainWindow;
-const DEFAULT_OLLAMA_MODEL = 'llama-writer';
+const DEFAULT_OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama-writer"
+// const DEFAULT_OLLAMA_MODEL = 'llama-writer';
 const SUPPORTED_OLLAMA_MODELS = ['llama-writer', 'llama3.1'];
 
 function createWindow() {
