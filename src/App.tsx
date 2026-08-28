@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from './components/ThemeContext';
 import PageLayout from './components/PageLayout';
@@ -6,7 +8,6 @@ import DraftEditor from './components/DraftEditor';
 import AgentChat from './components/AgentChat';
 import InputModal from './components/InputModal';
 import type { RichEditorHandle } from './components/RichTextEditor';
-import './globals.css';
 
 declare global {
   interface Window {
@@ -596,6 +597,14 @@ function AppContent() {
         projectPath: currentProject?.path,
         threadId: threadId,
         liveContent: liveContent, // Pass live editor content
+        allDocuments: tabs.map(tab => ({
+          id: tab.id,
+          title: tab.title,
+          path: tab.filePath || tab.id,
+          content: tab.id === activeTab?.id && editorRef.current
+            ? editorRef.current.getText()
+            : tab.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        })),
         ragEnabled: options.ragEnabled,
         modelName: options.modelName
       };

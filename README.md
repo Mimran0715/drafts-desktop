@@ -93,6 +93,29 @@ Build the app:
 npm run electron:build
 ```
 
+## Web App (Next.js)
+
+The web version uses the Next.js App Router and reuses the desktop React workspace. Start it with:
+
+```bash
+npm run web:dev
+```
+
+Create `.env` locally and add the same values to the Vercel project's environment variables:
+
+```env
+OLLAMA_API_KEY=your_ollama_api_key
+OLLAMA_BASE_URL=https://ollama.com/api
+OLLAMA_MODEL=gemma4:31b
+MODEL_LIST=["gemma4:31b"]
+```
+
+`OLLAMA_API_KEY` is read only by the server-side `/api/chat` route and is never sent to the browser. `OLLAMA_BASE_URL` defaults to Ollama's hosted API. The model selector is restricted to `MODEL_LIST`.
+
+Run `npm run web:build` before deployment, then import the repository into Vercel. Vercel detects Next.js automatically; configure the variables above for Production and Preview environments.
+
+In Chromium-based browsers, Drafts can open and autosave `.md` and `.txt` files through the File System Access API. Other browsers use a local browser-backed project. Browser projects keep cached copies for session restore; `.docx` editing remains a desktop-only feature.
+
 ## Ollama Setup
 
 Drafts expects Ollama to be running locally for chat generation:
@@ -160,6 +183,9 @@ npm run dev             # Start Vite
 npm run electron:dev    # Start Vite and Electron
 npm run build           # Build renderer
 npm run electron:build  # Build packaged desktop app
+npm run web:dev         # Start the Next.js web app
+npm run web:build       # Build the Vercel web app
+npm run web:start       # Serve the production Next.js build
 npm run lint            # Run ESLint
 npm run chroma          # Run Chroma manually with ./chroma-data
 ```
@@ -183,4 +209,16 @@ electron/
     vectorStore.js           Chroma indexing, embeddings, retrieval status
     chromaServer.js          Local Chroma process manager
     checkpointer.js          SQLite graph checkpoints
+
+app/
+  page.tsx                   Next.js App Router entry point
+  api/chat/route.ts          Server-only Ollama writing-agent endpoint
+  api/models/route.ts        Public model-selector configuration
+
+lib/
+  agent.ts                   Web understand -> execute -> respond workflow
+  ollama/                    Validated Ollama configuration and API client
+
+src/web/
+  webApi.ts                  Browser adapter for the Electron renderer contract
 ```

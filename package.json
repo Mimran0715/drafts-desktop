@@ -5,6 +5,9 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
+    "web:dev": "next dev",
+    "web:build": "next build",
+    "web:start": "next start",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -24,6 +27,7 @@
     "dotenv": "^17.4.2",
     "jspdf": "^3.0.4",
     "mammoth": "^1.11.0",
+    "next": "^15.5.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
