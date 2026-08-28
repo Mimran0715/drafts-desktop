@@ -1,5 +1,6 @@
 // electron/ai/tools.js
 // Agent tools for searching, analyzing, and generating content
+require('dotenv').config();
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -7,8 +8,9 @@ const mammoth = require('mammoth');
 const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
 const { searchWithChroma } = require('./vectorStore');
+const { OLLAMA_MODEL } = require('./config');
 
-const MODEL = "llama-writer";
+const MODEL = OLLAMA_MODEL;
 const modelCache = new Map();
 
 function getModel(modelName = MODEL) {

@@ -19,6 +19,7 @@ declare global {
       chatStream?: (message: string, context: any, streamId: string) => Promise<any>;
       onChatStreamChunk?: (callback: (payload: { streamId: string; chunk: string }) => void) => () => void;
       getOllamaModels?: () => Promise<string[]>;
+      getDefaultOllamaModel?: () => Promise<string>;
       getChromaStatus?: () => Promise<{
         available: boolean;
         host: string;
@@ -74,9 +75,6 @@ const STREAM_TICK_MS = 45;
 const LAST_PROJECT_KEY = 'lastProject';
 const RAG_ENABLED_KEY = 'ragEnabled';
 const SELECTED_MODEL_KEY = 'selectedOllamaModel';
-const DEFAULT_OLLAMA_MODEL = "qwen";
-//const DEFAULT_OLLAMA_MODEL = 'llama-writer';
-const SUPPORTED_OLLAMA_MODELS = ["qwen", 'llama-writer', 'llama3.1'];
 
 function getFolderName(folderPath: string) {
   return folderPath.split('/').pop() || folderPath.split('\\').pop() || 'Untitled';
@@ -113,8 +111,8 @@ function AppContent() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
   const [ragEnabled, setRagEnabled] = useState(false);
-  const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
   const [chromaStatus, setChromaStatus] = useState<{
     available: boolean;
     host: string;
@@ -227,18 +225,19 @@ function AppContent() {
           window.electronAPI.getPreference(LAST_PROJECT_KEY, null),
           window.electronAPI.getPreference(RAG_ENABLED_KEY, false)
         ]);
-        const savedModel = await window.electronAPI.getPreference(SELECTED_MODEL_KEY, DEFAULT_OLLAMA_MODEL);
-        const models = window.electronAPI.getOllamaModels
-          ? await window.electronAPI.getOllamaModels()
-          : [DEFAULT_OLLAMA_MODEL];
+        const [defaultModel, models] = await Promise.all([
+          window.electronAPI.getDefaultOllamaModel?.() ?? Promise.resolve(''),
+          window.electronAPI.getOllamaModels?.() ?? Promise.resolve([])
+        ]);
+        const savedModel = await window.electronAPI.getPreference(SELECTED_MODEL_KEY, defaultModel);
 
         if (isCancelled) return;
 
         setRagEnabled(!!savedRagEnabled);
-        const nextModels = models.filter(model => SUPPORTED_OLLAMA_MODELS.includes(model));
+        const nextModels = models.length > 0 ? models : [defaultModel].filter(Boolean);
         const nextSelectedModel = nextModels.includes(savedModel)
           ? savedModel
-          : DEFAULT_OLLAMA_MODEL;
+          : defaultModel || nextModels[0] || '';
         setAvailableModels(nextModels);
         setSelectedModel(nextSelectedModel);
 

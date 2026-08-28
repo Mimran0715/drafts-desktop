@@ -39,11 +39,11 @@ const { runAgent } = require('./ai/index.js');
 const { getChromaStatus } = require('./ai/vectorStore.js');
 const { startChromaServer, stopChromaServer } = require('./ai/chromaServer.js');
 const db = require('./database.js');
+const { OLLAMA_MODEL, MODEL_LIST } = require('./ai/config.js');
 
 let mainWindow;
-const DEFAULT_OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama-writer"
-// const DEFAULT_OLLAMA_MODEL = 'llama-writer';
-const SUPPORTED_OLLAMA_MODELS = ['llama-writer', 'llama3.1'];
+const DEFAULT_OLLAMA_MODEL = OLLAMA_MODEL
+const SUPPORTED_OLLAMA_MODELS = MODEL_LIST
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -312,7 +312,7 @@ ipcMain.handle('chat', async (event, message, context) => {
     
     if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
       return {
-        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The 'llama-writer' model is available in Ollama",
+        response: `⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The '${DEFAULT_OLLAMA_MODEL}' model is available in Ollama`,
         timestamp: new Date(),
       };
     }
@@ -367,7 +367,7 @@ ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
     
     if (error.message?.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED') {
       return {
-        response: "⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The 'llama-writer' model is available in Ollama",
+        response: `⚠️ Could not connect to Ollama. Please make sure:\n1. Ollama is installed (https://ollama.ai)\n2. Ollama is running (run 'ollama serve' in terminal)\n3. The '${DEFAULT_OLLAMA_MODEL}' model is available in Ollama`,
         timestamp: new Date(),
       };
     }
@@ -380,26 +380,10 @@ ipcMain.handle('chat-stream', async (event, message, context, streamId) => {
 });
 
 ipcMain.handle('get-ollama-models', async () => {
-  try {
-    const response = await fetch('http://127.0.0.1:11434/api/tags');
-    if (!response.ok) {
-      throw new Error(`Ollama returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    const installedModels = Array.isArray(data.models)
-      ? data.models.map(model => model.name).filter(Boolean)
-      : [];
-    const models = SUPPORTED_OLLAMA_MODELS.filter(model => (
-      installedModels.some(installed => installed === model || installed === `${model}:latest`)
-    ));
-
-    return models.length > 0 ? models : SUPPORTED_OLLAMA_MODELS;
-  } catch (error) {
-    console.error('Error loading Ollama models:', error.message);
-    return SUPPORTED_OLLAMA_MODELS;
-  }
+  return SUPPORTED_OLLAMA_MODELS;
 });
+
+ipcMain.handle('get-default-ollama-model', () => DEFAULT_OLLAMA_MODEL);
 
 ipcMain.handle('get-chroma-status', async () => {
   return getChromaStatus();

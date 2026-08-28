@@ -1,12 +1,14 @@
 // electron/ai/nodes.js
 // Multi-node agent architecture: understand → execute → respond
+require('dotenv').config();
 
 const { ChatOllama } = require('@langchain/ollama');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 const { searchContext, analyzeDraft, generateText, askQuestion } = require('./tools');
 const { traceable } = require('langsmith/traceable');
+const { OLLAMA_MODEL } = require('./config');
 
-const MODEL = "llama-writer";
+const MODEL = OLLAMA_MODEL;
 const modelCache = new Map();
 
 function getModel(modelName = MODEL) {

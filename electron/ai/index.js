@@ -5,6 +5,7 @@ const { HumanMessage } = require('@langchain/core/messages');
 const { runAgentGraph } = require('./graph');
 const { createInitialState } = require('./state');
 const db = require('../database.js');
+const { OLLAMA_MODEL } = require('./config');
 
 function cleanChatOutput(content) {
   return content
@@ -42,7 +43,7 @@ async function runAgent(params) {
   console.log('Active Document:', activeDocumentPath);
   console.log('Thread:', thread);
   console.log('Message:', message);
-  console.log('Model:', modelName || 'llama-writer');
+  console.log('Model:', modelName || OLLAMA_MODEL);
   console.log('Live Content:', liveContent ? 'Yes' : 'No');
   console.log('='.repeat(60) + '\n');
   
@@ -56,7 +57,7 @@ async function runAgent(params) {
       messages: [new HumanMessage(message)],
       liveContent: liveContent, // Pass live content to tools
       ragEnabled: !!ragEnabled,
-      modelName: modelName || 'llama-writer',
+      modelName: modelName || OLLAMA_MODEL,
       streamWriter: typeof onToken === 'function' ? onToken : null
     };
     

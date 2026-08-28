@@ -3,7 +3,9 @@ require('dotenv').config();
 const { ChatOllama } = require('@langchain/ollama');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 
-const MODEL = process.env.OLLAMA_MODEL || "llama-writer";
+const { OLLAMA_MODEL } = require('./ai/config.js');
+
+const MODEL = OLLAMA_MODEL;
 
 const model = new ChatOllama({
   model: MODEL,

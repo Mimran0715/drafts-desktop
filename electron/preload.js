@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('chat-stream-chunk', listener);
   },
   getOllamaModels: () => ipcRenderer.invoke('get-ollama-models'),
+  getDefaultOllamaModel: () => ipcRenderer.invoke('get-default-ollama-model'),
   getChromaStatus: () => ipcRenderer.invoke('get-chroma-status'),
   
   // Database - Recent projects
