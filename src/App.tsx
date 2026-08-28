@@ -74,8 +74,9 @@ const STREAM_TICK_MS = 45;
 const LAST_PROJECT_KEY = 'lastProject';
 const RAG_ENABLED_KEY = 'ragEnabled';
 const SELECTED_MODEL_KEY = 'selectedOllamaModel';
-const DEFAULT_OLLAMA_MODEL = 'llama-writer';
-const SUPPORTED_OLLAMA_MODELS = ['llama-writer', 'llama3.1'];
+const DEFAULT_OLLAMA_MODEL = "qwen";
+//const DEFAULT_OLLAMA_MODEL = 'llama-writer';
+const SUPPORTED_OLLAMA_MODELS = ["qwen", 'llama-writer', 'llama3.1'];
 
 function getFolderName(folderPath: string) {
   return folderPath.split('/').pop() || folderPath.split('\\').pop() || 'Untitled';
