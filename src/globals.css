@@ -81,6 +81,7 @@
   
   --border-main: #292524;
   --border-input: #44403c;
+  --surface-raised: #292524;
 }
 
 /* Rose theme */
@@ -111,6 +112,7 @@
   
   --border-main: #CE8A97;
   --border-input: #e5b8c1;
+  --surface-raised: #f5d9de;
 }
 
 /* Sage theme - Soft, natural greens */
@@ -142,6 +144,7 @@
   
   --border-main: #a8b89a;
   --border-input: #b8c9a7;
+  --surface-raised: #e8eedf;
 }
 
 /* Ocean theme - Cool, calming blue tones */
@@ -173,6 +176,7 @@
   
   --border-main: #1f4558;
   --border-input: #4a89a8;
+  --surface-raised: #3a7190;
 }
 
 /* Midnight theme - Deep, sophisticated dark blues */
@@ -204,6 +208,7 @@
   
   --border-main: #0f1225;
   --border-input: #2f3a5a;
+  --surface-raised: #252c4d;
 }
 
 
