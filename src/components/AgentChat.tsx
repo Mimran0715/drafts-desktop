@@ -12,24 +12,25 @@ interface Message {
 
 interface AgentChatProps {
   messages: Message[];
-  onSend: (message: string, options: { ragEnabled: boolean; modelName: string }) => void;
+  onSend: (message: string, options: { modelName: string }) => void;
   isLoading?: boolean;
-  ragEnabled: boolean;
-  onRagEnabledChange: (enabled: boolean) => void;
   selectedModel: string;
   availableModels: string[];
   onSelectedModelChange: (modelName: string) => void;
-  chromaStatus: {
-    available: boolean;
-    host: string;
-    port: number;
-    version?: string | null;
-    error?: string;
-    embeddingModel?: string;
-    embeddingMode?: 'ollama' | 'hash' | string;
-    semanticSearch?: boolean;
-  } | null;
 }
+
+const CHAT_PLACEHOLDERS = [
+  'What are we working on today?',
+  'Dipping pens in ink…',
+  'The words are waiting.',
+  'Let’s see where the story takes us.',
+  'Shall we begin?',
+  'One sentence at a time.',
+  'Let’s follow the thread.',
+  'A blank page is waiting.',
+  'What story are you telling today?',
+  'Let’s make something worth keeping.',
+];
 
 function cleanChatOutput(content: string) {
   return content
@@ -43,14 +44,14 @@ export default function AgentChat({
   messages,
   onSend,
   isLoading,
-  ragEnabled,
-  onRagEnabledChange,
   selectedModel,
   availableModels,
-  onSelectedModelChange,
-  chromaStatus
+  onSelectedModelChange
 }: AgentChatProps) {
   const [input, setInput] = useState('');
+  const [placeholder] = useState(
+    () => CHAT_PLACEHOLDERS[Math.floor(Math.random() * CHAT_PLACEHOLDERS.length)]
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -63,30 +64,10 @@ export default function AgentChat({
 
   const handleSend = () => {
     if (input.trim() && !isLoading) {
-      onSend(input, { ragEnabled, modelName: selectedModel });
+      onSend(input, { modelName: selectedModel });
       setInput('');
     }
   };
-
-  const retrievalStatusLabel = (() => {
-    if (!chromaStatus) return 'Checking retrieval...';
-    if (!chromaStatus.available) return 'Keyword fallback';
-    if (chromaStatus.semanticSearch) return 'Vector (semantic)';
-    return 'Vector (hash fallback)';
-  })();
-
-  const retrievalStatusTitle = (() => {
-    if (!chromaStatus) return 'Checking Chroma status';
-    if (!chromaStatus.available) {
-      return chromaStatus.error || 'Chroma unavailable; keyword search will be used';
-    }
-
-    const embedInfo = chromaStatus.embeddingModel
-      ? `Embeddings: ${chromaStatus.embeddingModel} (${chromaStatus.embeddingMode || 'unknown'})`
-      : 'Embeddings configured';
-
-    return `Chroma available on ${chromaStatus.host}:${chromaStatus.port}. ${embedInfo}.`;
-  })();
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -104,9 +85,6 @@ export default function AgentChat({
             <p className="section-title mb-3">Assistant</p>
             <p className="text-sm mb-2" style={{ color: 'var(--sidebar-text)' }}>
               Ready for revision notes, scene options, and continuity checks.
-            </p>
-            <p className="text-xs" style={{ color: 'var(--sidebar-text-muted)' }}>
-              Project context can be enabled below.
             </p>
           </div>
         ) : (
@@ -185,27 +163,7 @@ export default function AgentChat({
         className="chat-composer p-4 border-t"
         style={{ borderColor: 'var(--border-main)' }}
       >
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <label 
-            className="flex items-center gap-2 text-xs select-none min-w-0"
-            style={{ color: 'var(--sidebar-text-muted)' }}
-          >
-            <input
-              type="checkbox"
-              checked={ragEnabled}
-              onChange={(e) => onRagEnabledChange(e.target.checked)}
-              disabled={isLoading}
-            />
-            <span>Use project context</span>
-            <span
-              title={retrievalStatusTitle}
-              style={{
-                color: chromaStatus?.available ? 'var(--btn-primary-bg)' : 'var(--sidebar-text-muted)'
-              }}
-            >
-              {retrievalStatusLabel}
-            </span>
-          </label>
+        <div className="flex items-center justify-end mb-3">
           <select
             value={selectedModel}
             onChange={(e) => onSelectedModelChange(e.target.value)}
@@ -231,7 +189,7 @@ export default function AgentChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask your companion anything..."
+            placeholder={placeholder}
             className="flex-1 px-4 py-3 text-sm resize-none border focus:outline-none transition-all shadow-sm"
             style={{
               background: 'var(--editor-bg)',

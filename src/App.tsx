@@ -74,7 +74,6 @@ interface SuggestionContext {
 const STREAM_CHARS_PER_TICK = 2;
 const STREAM_TICK_MS = 45;
 const LAST_PROJECT_KEY = 'lastProject';
-const RAG_ENABLED_KEY = 'ragEnabled';
 const SELECTED_MODEL_KEY = 'selectedOllamaModel';
 
 function getFolderName(folderPath: string) {
@@ -111,6 +110,7 @@ function AppContent() {
   const [showFileModal, setShowFileModal] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
+<<<<<<< HEAD
   const [ragEnabled, setRagEnabled] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
@@ -124,6 +124,10 @@ function AppContent() {
     embeddingMode?: string;
     semanticSearch?: boolean;
   } | null>(null);
+=======
+  const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
+>>>>>>> main
   
   // Autosave refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -222,6 +226,7 @@ function AppContent() {
       if (!window.electronAPI) return;
 
       try {
+<<<<<<< HEAD
         const [savedProject, savedRagEnabled] = await Promise.all([
           window.electronAPI.getPreference(LAST_PROJECT_KEY, null),
           window.electronAPI.getPreference(RAG_ENABLED_KEY, false)
@@ -236,6 +241,17 @@ function AppContent() {
 
         setRagEnabled(!!savedRagEnabled);
         const nextModels = models.length > 0 ? models : [defaultModel].filter(Boolean);
+=======
+        const savedProject = await window.electronAPI.getPreference(LAST_PROJECT_KEY, null);
+        const savedModel = await window.electronAPI.getPreference(SELECTED_MODEL_KEY, DEFAULT_OLLAMA_MODEL);
+        const models = window.electronAPI.getOllamaModels
+          ? await window.electronAPI.getOllamaModels()
+          : [DEFAULT_OLLAMA_MODEL];
+
+        if (isCancelled) return;
+
+        const nextModels = models.filter(model => SUPPORTED_OLLAMA_MODELS.includes(model));
+>>>>>>> main
         const nextSelectedModel = nextModels.includes(savedModel)
           ? savedModel
           : defaultModel || nextModels[0] || '';
@@ -260,38 +276,6 @@ function AppContent() {
 
     return () => {
       isCancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const refreshChromaStatus = async () => {
-      if (!window.electronAPI.getChromaStatus) return;
-
-      try {
-        const status = await window.electronAPI.getChromaStatus();
-        if (!isCancelled) {
-          setChromaStatus(status);
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setChromaStatus({
-            available: false,
-            host: 'localhost',
-            port: 8000,
-            error: error instanceof Error ? error.message : 'Unable to check Chroma',
-          });
-        }
-      }
-    };
-
-    refreshChromaStatus();
-    const interval = setInterval(refreshChromaStatus, 30000);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
     };
   }, []);
 
@@ -541,16 +525,6 @@ function AppContent() {
     ));
   };
 
-  const handleRagEnabledChange = async (enabled: boolean) => {
-    setRagEnabled(enabled);
-
-    try {
-      await window.electronAPI.setPreference(RAG_ENABLED_KEY, enabled);
-    } catch (error) {
-      console.error('Error saving RAG preference:', error);
-    }
-  };
-
   const handleSelectedModelChange = async (modelName: string) => {
     setSelectedModel(modelName);
 
@@ -561,7 +535,7 @@ function AppContent() {
     }
   };
 
-  const handleChatSend = async (message: string, options: { ragEnabled: boolean; modelName: string }) => {
+  const handleChatSend = async (message: string, options: { modelName: string }) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -597,6 +571,7 @@ function AppContent() {
         projectPath: currentProject?.path,
         threadId: threadId,
         liveContent: liveContent, // Pass live editor content
+<<<<<<< HEAD
         allDocuments: tabs.map(tab => ({
           id: tab.id,
           title: tab.title,
@@ -606,6 +581,9 @@ function AppContent() {
             : tab.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
         })),
         ragEnabled: options.ragEnabled,
+=======
+        ragEnabled: true,
+>>>>>>> main
         modelName: options.modelName
       };
 
@@ -771,12 +749,9 @@ function AppContent() {
             messages={messages}
             onSend={handleChatSend}
             isLoading={isLoading}
-            ragEnabled={ragEnabled}
-            onRagEnabledChange={handleRagEnabledChange}
             selectedModel={selectedModel}
             availableModels={availableModels}
             onSelectedModelChange={handleSelectedModelChange}
-            chromaStatus={chromaStatus}
           />
         }
       />
