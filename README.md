@@ -128,7 +128,7 @@ Set the default model and the models shown in the chat selector:
 
 ```env
 OLLAMA_MODEL=qwen3.5
-MODEL_LIST=["qwen3.5", "llama3.1", "llama-writer"]
+MODEL_LIST=["qwen3.5", "llama3.1", "llama-writer", "gpt-oss:120b-cloud"]
 ```
 
 For semantic RAG, install the embedding model:

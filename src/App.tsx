@@ -110,24 +110,8 @@ function AppContent() {
   const [showFileModal, setShowFileModal] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
-<<<<<<< HEAD
-  const [ragEnabled, setRagEnabled] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
-  const [chromaStatus, setChromaStatus] = useState<{
-    available: boolean;
-    host: string;
-    port: number;
-    version?: string | null;
-    error?: string;
-    embeddingModel?: string;
-    embeddingMode?: string;
-    semanticSearch?: boolean;
-  } | null>(null);
-=======
-  const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_OLLAMA_MODEL]);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_OLLAMA_MODEL);
->>>>>>> main
   
   // Autosave refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -226,12 +210,8 @@ function AppContent() {
       if (!window.electronAPI) return;
 
       try {
-<<<<<<< HEAD
-        const [savedProject, savedRagEnabled] = await Promise.all([
+        const [savedProject, defaultModel, models] = await Promise.all([
           window.electronAPI.getPreference(LAST_PROJECT_KEY, null),
-          window.electronAPI.getPreference(RAG_ENABLED_KEY, false)
-        ]);
-        const [defaultModel, models] = await Promise.all([
           window.electronAPI.getDefaultOllamaModel?.() ?? Promise.resolve(''),
           window.electronAPI.getOllamaModels?.() ?? Promise.resolve([])
         ]);
@@ -239,19 +219,7 @@ function AppContent() {
 
         if (isCancelled) return;
 
-        setRagEnabled(!!savedRagEnabled);
         const nextModels = models.length > 0 ? models : [defaultModel].filter(Boolean);
-=======
-        const savedProject = await window.electronAPI.getPreference(LAST_PROJECT_KEY, null);
-        const savedModel = await window.electronAPI.getPreference(SELECTED_MODEL_KEY, DEFAULT_OLLAMA_MODEL);
-        const models = window.electronAPI.getOllamaModels
-          ? await window.electronAPI.getOllamaModels()
-          : [DEFAULT_OLLAMA_MODEL];
-
-        if (isCancelled) return;
-
-        const nextModels = models.filter(model => SUPPORTED_OLLAMA_MODELS.includes(model));
->>>>>>> main
         const nextSelectedModel = nextModels.includes(savedModel)
           ? savedModel
           : defaultModel || nextModels[0] || '';
@@ -571,19 +539,7 @@ function AppContent() {
         projectPath: currentProject?.path,
         threadId: threadId,
         liveContent: liveContent, // Pass live editor content
-<<<<<<< HEAD
-        allDocuments: tabs.map(tab => ({
-          id: tab.id,
-          title: tab.title,
-          path: tab.filePath || tab.id,
-          content: tab.id === activeTab?.id && editorRef.current
-            ? editorRef.current.getText()
-            : tab.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-        })),
-        ragEnabled: options.ragEnabled,
-=======
         ragEnabled: true,
->>>>>>> main
         modelName: options.modelName
       };
 
