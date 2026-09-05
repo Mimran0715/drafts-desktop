@@ -45,17 +45,18 @@ When enabled:
 2. The active editor's live plain text is added as a synthetic "current draft" document.
 3. Documents are split into overlapping chunks of about 900 characters with 150 characters of overlap.
 4. Chunks are indexed in a per-project Chroma collection named from a hash of the project path.
-5. Query results are grouped by document and passed into search, analysis, generation, or final response prompts.
+5. LangChain's `EnsembleRetriever` fuses Chroma vector results (60%) with BM25 results (40%).
+6. `Xenova/ms-marco-MiniLM-L-6-v2` reranks the fused candidates before results are grouped by document and passed to prompts.
 
-Retrieval has three modes:
+Retrieval uses hybrid search by default:
 
 | UI status | Behavior |
 | --- | --- |
-| `Vector (semantic)` | Chroma is available and embeddings come from Ollama, defaulting to `nomic-embed-text`. |
-| `Vector (hash fallback)` | Chroma is available, but Ollama embeddings are unavailable, so Drafts uses deterministic local hash vectors. |
-| `Keyword fallback` | Chroma is unavailable, so Drafts falls back to line-based keyword matching across project files. |
+| `Hybrid` | Chroma semantic search and BM25 are fused, then a local cross-encoder reranks candidates. |
+| `Vector (hash fallback)` | Available only when `HASH_KEYWORD_FALLBACK_ENABLED=true` and Ollama embeddings are unavailable. |
+| `Keyword fallback` | Available only when `HASH_KEYWORD_FALLBACK_ENABLED=true` and Chroma/hybrid retrieval is unavailable. |
 
-The Electron app auto-starts Chroma on launch by default. If Chroma is already running, Drafts reuses it. If Chroma cannot start, the app still works with keyword retrieval.
+The Electron app auto-starts Chroma on launch by default. `HASH_KEYWORD_FALLBACK_ENABLED` defaults to `false`, so hybrid evaluation fails closed instead of silently switching retrieval algorithms. Set it to `true` to restore the legacy hash and keyword fallbacks.
 
 ## Local Persistence
 
@@ -107,7 +108,7 @@ For semantic RAG, install the embedding model:
 ollama pull nomic-embed-text
 ```
 
-If the embedding model is missing, Drafts falls back to hash-vector retrieval while keeping Chroma enabled.
+With the default fallback setting, the embedding model is required for RAG. Set `HASH_KEYWORD_FALLBACK_ENABLED=true` to permit hash-vector and keyword fallback.
 
 ## Chroma Setup
 

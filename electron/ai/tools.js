@@ -6,7 +6,7 @@ const path = require('path');
 const mammoth = require('mammoth');
 const { ChatOllama } = require('@langchain/ollama');
 const { traceable } = require('langsmith/traceable');
-const { searchWithChroma } = require('./vectorStore');
+const { searchWithChroma, HASH_KEYWORD_FALLBACK_ENABLED } = require('./vectorStore');
 
 const MODEL = "llama-writer";
 const modelCache = new Map();
@@ -306,8 +306,30 @@ const searchContext = traceable(async function searchContext(query, projectPath,
       console.log(`✅ Chroma retrieval complete (${results.embeddingMode || 'unknown'} embeddings, ${results.resultCount} docs)`);
       return results;
     } catch (error) {
-      console.warn('Chroma retrieval unavailable, falling back to keyword search:', error.message);
+      if (!HASH_KEYWORD_FALLBACK_ENABLED) {
+        console.error('Hybrid retrieval unavailable and fallback is disabled:', error.message);
+        return {
+          found: false,
+          query,
+          resultCount: 0,
+          retrievalMode: 'hybrid-unavailable',
+          error: error.message,
+          results: [],
+        };
+      }
+      console.warn('Hybrid retrieval unavailable, falling back to keyword search:', error.message);
     }
+  }
+
+  if (!HASH_KEYWORD_FALLBACK_ENABLED) {
+    return {
+      found: false,
+      query,
+      resultCount: 0,
+      retrievalMode: 'hybrid-unavailable',
+      error: 'Hybrid retrieval was not requested and keyword fallback is disabled',
+      results: [],
+    };
   }
 
   console.log('🔤 Running keyword retrieval...');

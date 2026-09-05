@@ -1,12 +1,17 @@
 const crypto = require('crypto');
 const path = require('path');
 const { ChromaClient } = require('chromadb');
+const { Document } = require('@langchain/core/documents');
+const { BM25Retriever } = require('@langchain/community/retrievers/bm25');
+const { EnsembleRetriever } = require('@langchain/classic/retrievers/ensemble');
 const { getActiveChunks, reconcileChunks } = require('../database');
 
 const CHROMA_HOST = process.env.CHROMA_HOST || 'localhost';
 const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8000);
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+const CROSS_ENCODER_MODEL = process.env.CROSS_ENCODER_MODEL || 'Xenova/ms-marco-MiniLM-L-6-v2';
+const HASH_KEYWORD_FALLBACK_ENABLED = process.env.HASH_KEYWORD_FALLBACK_ENABLED === 'true';
 const HASH_EMBEDDING_DIMENSIONS = 256;
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 120;
@@ -15,6 +20,7 @@ const EMBED_CONCURRENCY = 4;
 const indexCache = new Map();
 let embeddingMode = null;
 let embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
+let crossEncoderPromise = null;
 
 function hashText(text) {
   return crypto.createHash('sha1').update(text).digest('hex');
@@ -85,6 +91,10 @@ async function resolveEmbeddingMode(forceRefresh = false) {
     await embedTextWithOllama('drafts embedding probe');
     embeddingMode = 'ollama';
   } catch (error) {
+    if (!HASH_KEYWORD_FALLBACK_ENABLED) {
+      embeddingMode = null;
+      throw new Error(`Ollama embeddings unavailable (${OLLAMA_EMBED_MODEL}) and hash fallback is disabled: ${error.message}`);
+    }
     console.warn(`Ollama embeddings unavailable (${OLLAMA_EMBED_MODEL}), using hash fallback:`, error.message);
     embeddingMode = 'hash';
     embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
@@ -99,6 +109,10 @@ async function embedText(text) {
     try {
       return await embedTextWithOllama(text);
     } catch (error) {
+      if (!HASH_KEYWORD_FALLBACK_ENABLED) {
+        embeddingMode = null;
+        throw new Error(`Ollama embedding failed and hash fallback is disabled: ${error.message}`);
+      }
       console.warn('Ollama embedding failed for query chunk, falling back to hash:', error.message);
       embeddingMode = 'hash';
       embeddingDimensions = HASH_EMBEDDING_DIMENSIONS;
@@ -332,16 +346,80 @@ async function ensureIndexedCollection(client, collectionName, projectPath, docu
   return collection;
 }
 
-function formatQueryResults(query, result) {
-  const documents = result.documents?.[0] || [];
-  const metadatas = result.metadatas?.[0] || [];
-  const distances = result.distances?.[0] || [];
+function chunksToDocuments(chunks) {
+  return chunks.map(chunk => new Document({
+    id: chunk.id,
+    pageContent: chunk.content,
+    metadata: { ...chunk.metadata, chunk_id: chunk.id },
+  }));
+}
+
+function createChromaRetriever(collection, candidateCount) {
+  return {
+    async invoke(query) {
+      const queryEmbedding = await embedText(query);
+      const result = await collection.query({
+        queryEmbeddings: [queryEmbedding],
+        nResults: candidateCount,
+        include: ['documents', 'metadatas', 'distances'],
+      });
+
+      return (result.documents?.[0] || []).map((pageContent, index) => new Document({
+        pageContent: String(pageContent || ''),
+        metadata: {
+          ...(result.metadatas?.[0]?.[index] || {}),
+          vectorDistance: result.distances?.[0]?.[index],
+        },
+      }));
+    },
+  };
+}
+
+async function getCrossEncoder() {
+  if (!crossEncoderPromise) {
+    crossEncoderPromise = import('@huggingface/transformers').then(async ({
+      AutoModelForSequenceClassification,
+      AutoTokenizer,
+    }) => ({
+      tokenizer: await AutoTokenizer.from_pretrained(CROSS_ENCODER_MODEL),
+      model: await AutoModelForSequenceClassification.from_pretrained(CROSS_ENCODER_MODEL),
+    }));
+  }
+  return crossEncoderPromise;
+}
+
+async function rerankDocuments(query, documents, limit) {
+  if (documents.length === 0) return [];
+  const { tokenizer, model } = await getCrossEncoder();
+  const inputs = tokenizer(
+    documents.map(() => query),
+    { text_pair: documents.map(doc => doc.pageContent), padding: true, truncation: true }
+  );
+  const output = await model(inputs);
+  const logits = Array.from(output.logits.data);
+  const labelsPerDocument = output.logits.dims[output.logits.dims.length - 1];
+
+  return documents
+    .map((document, index) => ({
+      document,
+      // MS MARCO exports normally have one relevance logit. For two-label
+      // classifiers, the final logit represents the positive/relevant class.
+      score: logits[index * labelsPerDocument + labelsPerDocument - 1],
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ document, score }) => new Document({
+      id: document.id,
+      pageContent: document.pageContent,
+      metadata: { ...document.metadata, rerankerScore: score },
+    }));
+}
+
+function formatHybridResults(query, documents) {
   const grouped = new Map();
-
-  documents.forEach((document, index) => {
-    const metadata = metadatas[index] || {};
-    const key = metadata.document_path || metadata.document_name || `result-${index}`;
-
+  for (const document of documents) {
+    const metadata = document.metadata || {};
+    const key = metadata.document_path || metadata.document_name || document.id;
     if (!grouped.has(key)) {
       grouped.set(key, {
         documentName: metadata.document_name || 'Project context',
@@ -350,32 +428,27 @@ function formatQueryResults(query, result) {
         matches: [],
       });
     }
-
-    const item = grouped.get(key);
-    const distance = typeof distances[index] === 'number' ? distances[index] : 1;
-    item.relevanceScore += Math.max(0, 1 - distance);
-    item.matches.push({
+    const result = grouped.get(key);
+    result.relevanceScore += Number(metadata.rerankerScore || 0);
+    result.matches.push({
       lineNumber: metadata.chunk_index || 0,
-      context: String(document || '').trim(),
+      context: document.pageContent.trim(),
       matches: 1,
-      distance,
+      rerankerScore: metadata.rerankerScore,
     });
-  });
-
+  }
   const results = Array.from(grouped.values())
-    .map(resultItem => ({
-      ...resultItem,
-      matches: resultItem.matches.slice(0, 3),
-    }))
-    .sort((a, b) => b.relevanceScore - a.relevanceScore);
-
+    .map(result => ({ ...result, matches: result.matches.slice(0, 3) }))
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .slice(0, 3);
   return {
     found: results.length > 0,
     query,
     resultCount: results.length,
-    retrievalMode: 'chroma',
-    embeddingMode: embeddingMode || 'hash',
-    results: results.slice(0, 3),
+    retrievalMode: 'hybrid',
+    embeddingMode,
+    rerankerModel: CROSS_ENCODER_MODEL,
+    results,
   };
 }
 
@@ -392,20 +465,26 @@ async function searchWithChroma(query, projectPath, documents, options = {}) {
       found: false,
       query,
       resultCount: 0,
-      retrievalMode: 'chroma',
-      embeddingMode: embeddingMode || 'hash',
+      retrievalMode: 'hybrid',
+      embeddingMode: embeddingMode || (HASH_KEYWORD_FALLBACK_ENABLED ? 'hash' : 'unavailable'),
       results: [],
     };
   }
 
-  const queryEmbedding = await embedText(query);
-  const result = await collection.query({
-    queryEmbeddings: [queryEmbedding],
-    nResults: options.nResults || 6,
-    include: ['documents', 'metadatas', 'distances'],
+  const candidateCount = options.candidateCount || 12;
+  const finalCount = options.nResults || 6;
+  const vectorRetriever = createChromaRetriever(collection, candidateCount);
+  const bm25Retriever = BM25Retriever.fromDocuments(chunksToDocuments(chunks), {
+    k: candidateCount,
+    includeScore: true,
   });
-
-  return formatQueryResults(query, result);
+  const ensemble = new EnsembleRetriever({
+    retrievers: [vectorRetriever, bm25Retriever],
+    weights: options.hybridWeights || [0.6, 0.4],
+  });
+  const candidates = await ensemble.invoke(query);
+  const reranked = await rerankDocuments(query, candidates, finalCount);
+  return formatHybridResults(query, reranked);
 }
 
 async function getChromaStatus() {
@@ -428,9 +507,10 @@ async function getChromaStatus() {
       port: CHROMA_PORT,
       version,
       embeddingModel: OLLAMA_EMBED_MODEL,
-      embeddingMode: embeddingMode || 'hash',
+      embeddingMode: embeddingMode || (HASH_KEYWORD_FALLBACK_ENABLED ? 'hash' : 'unavailable'),
       embeddingDimensions,
       semanticSearch: embeddingMode === 'ollama',
+      hashKeywordFallbackEnabled: HASH_KEYWORD_FALLBACK_ENABLED,
     };
   } catch (error) {
     return {
@@ -439,9 +519,10 @@ async function getChromaStatus() {
       port: CHROMA_PORT,
       error: error.message,
       embeddingModel: OLLAMA_EMBED_MODEL,
-      embeddingMode: embeddingMode || 'hash',
+      embeddingMode: embeddingMode || (HASH_KEYWORD_FALLBACK_ENABLED ? 'hash' : 'unavailable'),
       embeddingDimensions,
       semanticSearch: false,
+      hashKeywordFallbackEnabled: HASH_KEYWORD_FALLBACK_ENABLED,
     };
   }
 }
@@ -456,5 +537,6 @@ module.exports = {
   splitMarkdown,
   getChromaStatus,
   searchWithChroma,
+  HASH_KEYWORD_FALLBACK_ENABLED,
   invalidateProjectIndex,
 };

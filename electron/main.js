@@ -75,7 +75,10 @@ app.whenReady().then(async () => {
     } else if (chromaResult.reason === 'auto-start-disabled') {
       console.log('Expecting an external Chroma server');
     } else if (chromaResult.error) {
-      console.warn(`Chroma unavailable (${chromaResult.error}); keyword search fallback will be used`);
+      const fallbackMessage = process.env.HASH_KEYWORD_FALLBACK_ENABLED === 'true'
+        ? 'keyword search fallback will be used'
+        : 'hybrid RAG will be unavailable because fallback is disabled';
+      console.warn(`Chroma unavailable (${chromaResult.error}); ${fallbackMessage}`);
     }
   } catch (error) {
     console.warn('Failed to start Chroma server:', error.message);
