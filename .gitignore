@@ -29,8 +29,4 @@ chroma-data/
 node_modules/
 dist/
 __pycache__/
-<<<<<<< HEAD
 *.pyc
-=======
-*.pyc
->>>>>>> main
