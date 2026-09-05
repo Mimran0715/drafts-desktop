@@ -164,41 +164,49 @@ ipcMain.handle('select-project-folder', async () => {
   return result.filePaths[0];
 });
 
+const ALLOWED_EXTENSIONS = new Set(['.md', '.txt', '.docx', '.doc']);
+
+function isHidden(filename) {
+  return filename.startsWith('.');
+}
+
+function isSupportedDocument(filename) {
+  if (isHidden(filename)) return false;
+  const ext = path.extname(filename).toLowerCase();
+  return ALLOWED_EXTENSIONS.has(ext);
+}
+
 ipcMain.handle('load-documents', async (event, folderPath) => {
   try {
     console.log('Loading documents from:', folderPath);
     const files = await fs.readdir(folderPath);
     console.log('All files:', files);
-    
-    const supportedFiles = files.filter(file => {
-      const ext = file.toLowerCase();
-      return ext.endsWith('.md') || ext.endsWith('.txt') || ext.endsWith('.docx') || ext.endsWith('.doc');
-    });
+
+    const supportedFiles = files.filter(isSupportedDocument);
     console.log('Supported files:', supportedFiles);
-    
+
     const documents = await Promise.all(
       supportedFiles.map(async (filename) => {
         const filePath = path.join(folderPath, filename);
         let content = '';
-        
+
         try {
-          const lowerFilename = filename.toLowerCase();
           const stats = await fs.stat(filePath);
-          
-          if (lowerFilename.endsWith('.md') || lowerFilename.endsWith('.txt')) {
+          if (stats.isDirectory()) return null;
+
+          const ext = path.extname(filename).toLowerCase();
+
+          if (ext === '.md' || ext === '.txt') {
             const textContent = await fs.readFile(filePath, 'utf-8');
             content = textToHtml(textContent);
-          } else if (lowerFilename.endsWith('.docx')) {
+          } else if (ext === '.docx') {
             if (stats.size === 0) {
               console.warn(`Skipping empty .docx file ${filename}`);
               content = invalidDocxHtml(filename);
             } else {
               try {
-                // Use mammoth to convert to HTML instead of plain text
                 const result = await mammoth.convertToHtml({ path: filePath });
                 content = result.value;
-                
-                // Log any warnings from mammoth
                 if (result.messages.length > 0) {
                   console.log(`Mammoth warnings for ${filename}:`, result.messages);
                 }
@@ -207,7 +215,7 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
                 content = invalidDocxHtml(filename);
               }
             }
-          } else if (lowerFilename.endsWith('.doc')) {
+          } else if (ext === '.doc') {
             content = textToHtml(`# ${filename}\n\nOld .doc format is not supported. Please convert to .docx or .txt format.\n\nYou can edit this file here and it will be saved as plain text.`);
           }
 
@@ -223,7 +231,7 @@ ipcMain.handle('load-documents', async (event, folderPath) => {
         }
       })
     );
-    
+
     const validDocuments = documents.filter(doc => doc !== null);
     console.log('Loaded documents:', validDocuments.length);
     return validDocuments;

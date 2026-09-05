@@ -1,7 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const { app } = require('electron');
-const fs = require('fs');
 
 let db = null;
 
@@ -76,7 +75,7 @@ function initializeTables() {
 // ===== PROJECT FUNCTIONS =====
 
 function addRecentProject(projectId, name, projectPath) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     INSERT INTO projects (id, name, path, last_opened)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(path) DO UPDATE SET
@@ -88,7 +87,7 @@ function addRecentProject(projectId, name, projectPath) {
 }
 
 function getRecentProjects(limit = 10) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     SELECT * FROM projects
     ORDER BY last_opened DESC
     LIMIT ?
@@ -98,7 +97,7 @@ function getRecentProjects(limit = 10) {
 }
 
 function updateProjectLastOpened(projectPath) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     UPDATE projects 
     SET last_opened = CURRENT_TIMESTAMP
     WHERE path = ?
@@ -108,14 +107,14 @@ function updateProjectLastOpened(projectPath) {
 }
 
 function deleteProject(projectPath) {
-  const stmt = db.prepare('DELETE FROM projects WHERE path = ?');
+  const stmt = getDatabase().prepare('DELETE FROM projects WHERE path = ?');
   stmt.run(projectPath);
 }
 
 // ===== PREFERENCES FUNCTIONS =====
 
 function setPreference(key, value) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     INSERT INTO preferences (key, value, updated_at)
     VALUES (?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(key) DO UPDATE SET
@@ -127,27 +126,27 @@ function setPreference(key, value) {
 }
 
 function getPreference(key, defaultValue = null) {
-  const stmt = db.prepare('SELECT value FROM preferences WHERE key = ?');
+  const stmt = getDatabase().prepare('SELECT value FROM preferences WHERE key = ?');
   const row = stmt.get(key);
 
   if (!row) return defaultValue;
 
   try {
     return JSON.parse(row.value);
-  } catch (e) {
+  } catch {
     return row.value;
   }
 }
 
 function getAllPreferences() {
-  const stmt = db.prepare('SELECT key, value FROM preferences');
+  const stmt = getDatabase().prepare('SELECT key, value FROM preferences');
   const rows = stmt.all();
 
   const prefs = {};
   rows.forEach(row => {
     try {
       prefs[row.key] = JSON.parse(row.value);
-    } catch (e) {
+    } catch {
       prefs[row.key] = row.value;
     }
   });
@@ -158,7 +157,7 @@ function getAllPreferences() {
 // ===== CONVERSATION FUNCTIONS =====
 
 function saveMessage(projectPath, threadId, role, content) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     INSERT INTO conversations (project_path, thread_id, role, content)
     VALUES (?, ?, ?, ?)
   `);
@@ -167,7 +166,7 @@ function saveMessage(projectPath, threadId, role, content) {
 }
 
 function getConversationHistory(threadId, limit = 50) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     SELECT role, content, created_at
     FROM conversations
     WHERE thread_id = ?
@@ -179,7 +178,7 @@ function getConversationHistory(threadId, limit = 50) {
 }
 
 function getProjectConversations(projectPath) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     SELECT DISTINCT thread_id, 
            MIN(created_at) as started_at,
            MAX(created_at) as last_message_at,
@@ -194,12 +193,12 @@ function getProjectConversations(projectPath) {
 }
 
 function deleteConversation(threadId) {
-  const stmt = db.prepare('DELETE FROM conversations WHERE thread_id = ?');
+  const stmt = getDatabase().prepare('DELETE FROM conversations WHERE thread_id = ?');
   stmt.run(threadId);
 }
 
 function clearOldConversations(daysOld = 30) {
-  const stmt = db.prepare(`
+  const stmt = getDatabase().prepare(`
     DELETE FROM conversations 
     WHERE created_at < datetime('now', '-' || ? || ' days')
   `);

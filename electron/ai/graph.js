@@ -2,9 +2,8 @@
 // Agent workflow graph: orchestrates the multi-node flow
 
 const { StateGraph, Annotation, START, END } = require('@langchain/langgraph');
-const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 const { understandNode, executeNode, respondNode } = require('./nodes');
-const { saveCheckpoint, getLatestCheckpoint } = require('./checkpointer');
+const { getCheckpointer } = require('./checkpointer');
 const { traceable } = require('langsmith/traceable');
 
 const AgentStateAnnotation = Annotation.Root({
@@ -21,7 +20,6 @@ const AgentStateAnnotation = Annotation.Root({
   liveContent: Annotation(),
   ragEnabled: Annotation(),
   modelName: Annotation(),
-  streamWriter: Annotation(),
   threadId: Annotation(),
   userIntent: Annotation(),
   gatheredInfo: Annotation({
@@ -36,62 +34,13 @@ const AgentStateAnnotation = Annotation.Root({
 
 let compiledAgentGraph = null;
 
-function hydrateMessage(message) {
-  if (!message || typeof message !== 'object') {
-    return message;
-  }
-
-  if (message._getType || message.constructor?.name?.endsWith('Message')) {
-    return message;
-  }
-
-  const role = message.role || message.type;
-  const content = message.content || '';
-
-  if (role === 'human' || role === 'user') {
-    return new HumanMessage(content);
-  }
-
-  if (role === 'ai' || role === 'assistant' || role === 'agent') {
-    return new AIMessage(content);
-  }
-
-  if (role === 'system') {
-    return new SystemMessage(content);
-  }
-
-  return message;
-}
-
-function mergeNodeUpdateForCheckpoint(state, update) {
-  if (!update) return state;
-
-  const nextState = { ...state, ...update };
-  if (Object.prototype.hasOwnProperty.call(update, 'messages')) {
-    const updateMessages = Array.isArray(update.messages) ? update.messages : [update.messages];
-    nextState.messages = [...(state.messages || []), ...updateMessages.filter(Boolean)];
-  }
-
-  if (Object.prototype.hasOwnProperty.call(update, 'gatheredInfo')) {
-    nextState.gatheredInfo = {
-      ...(state.gatheredInfo || {}),
-      ...(update.gatheredInfo || {}),
-    };
-  }
-
-  return nextState;
-}
-
 function checkpointNode(name, node) {
-  return async (state) => {
+  return async (state, config) => {
     console.log(`\n--- NODE: ${name.toUpperCase()} ---`);
-    const update = await node(state);
-
-    if (state.threadId) {
-      saveCheckpoint(state.threadId, mergeNodeUpdateForCheckpoint(state, update));
-    }
-
-    return update;
+    return node({
+      ...state,
+      streamWriter: config?.configurable?.streamWriter || null
+    });
   };
 }
 
@@ -108,7 +57,7 @@ function buildAgentGraph() {
     .addEdge('understand', 'execute')
     .addEdge('execute', 'respond')
     .addEdge('respond', END)
-    .compile();
+    .compile({ checkpointer: getCheckpointer() });
 
   return compiledAgentGraph;
 }
@@ -120,39 +69,25 @@ function buildAgentGraph() {
  * @returns {Promise<Object>} Final agent state
  */
 const runAgentGraph = traceable(async function runAgentGraph(initialState, config = {}) {
-  const { threadId } = config;
+  const { threadId, streamWriter } = config;
   
   console.log('\n🚀 Starting agent graph...');
   console.log('Thread ID:', threadId);
   
-  // Load previous state if continuing a conversation
-  let state = { ...initialState, threadId };
-  
-  if (threadId) {
-    const checkpoint = getLatestCheckpoint(threadId);
-    if (checkpoint) {
-      console.log('📦 Loaded checkpoint from', checkpoint.createdAt);
-      const checkpointMessages = (checkpoint.state.messages || []).map(hydrateMessage);
-
-      // Merge checkpoint state with new message
-      state = {
-        ...checkpoint.state,
-        ...initialState,
-        threadId,
-        messages: [...checkpointMessages, ...initialState.messages],
-        gatheredInfo: checkpoint.state.gatheredInfo || {},
-        iterationCount: checkpoint.state.iterationCount || 0
-      };
-    }
-  }
+  const state = { ...initialState, threadId };
   
   try {
     const graph = buildAgentGraph();
-    state = await graph.invoke(state);
+    const result = await graph.invoke(state, {
+      configurable: {
+        thread_id: threadId,
+        streamWriter: streamWriter || null
+      }
+    });
     
     console.log('\n✅ Agent graph completed\n');
     
-    return state;
+    return result;
   } catch (error) {
     console.error('❌ Error in agent graph:', error);
     throw error;

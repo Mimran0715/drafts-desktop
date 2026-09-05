@@ -56,13 +56,13 @@ async function runAgent(params) {
       messages: [new HumanMessage(message)],
       liveContent: liveContent, // Pass live content to tools
       ragEnabled: !!ragEnabled,
-      modelName: modelName || 'llama-writer',
-      streamWriter: typeof onToken === 'function' ? onToken : null
+      modelName: modelName || 'llama-writer'
     };
     
     // Run the agent graph
     const result = await runAgentGraph(initialState, {
-      threadId: thread
+      threadId: thread,
+      streamWriter: typeof onToken === 'function' ? onToken : null
     });
     
     // Extract final response
