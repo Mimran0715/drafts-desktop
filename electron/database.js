@@ -69,6 +69,30 @@ function initializeTables() {
     ON conversations(project_path, created_at DESC)
   `);
 
+  // Authoritative chunk lineage. Chroma stores the text and vectors; SQLite
+  // records which vectors are current so edits can be reconciled incrementally.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chunks (
+      chunk_id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL,
+      folder_id TEXT NOT NULL,
+      chunk_hash TEXT NOT NULL,
+      chroma_vector_id TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      stale INTEGER NOT NULL DEFAULT 0 CHECK (stale IN (0, 1))
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_chunks_folder_active
+    ON chunks(folder_id, stale)
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_chunks_document_active
+    ON chunks(document_id, stale)
+  `);
+
   console.log('Database tables initialized');
 }
 
@@ -207,6 +231,50 @@ function clearOldConversations(daysOld = 30) {
   return result.changes;
 }
 
+// ===== CHUNK LEDGER FUNCTIONS =====
+
+function getActiveChunks(folderId) {
+  return getDatabase().prepare(`
+    SELECT chunk_id, document_id, folder_id, chunk_hash, chroma_vector_id, created_at
+    FROM chunks
+    WHERE folder_id = ? AND stale = 0
+  `).all(folderId);
+}
+
+function reconcileChunks(folderId, activeChunks, staleChunkIds) {
+  const database = getDatabase();
+  const markStale = database.prepare(`
+    UPDATE chunks SET stale = 1
+    WHERE folder_id = ? AND chunk_id = ?
+  `);
+  const upsert = database.prepare(`
+    INSERT INTO chunks (
+      chunk_id, document_id, folder_id, chunk_hash, chroma_vector_id, stale
+    ) VALUES (?, ?, ?, ?, ?, 0)
+    ON CONFLICT(chunk_id) DO UPDATE SET
+      document_id = excluded.document_id,
+      folder_id = excluded.folder_id,
+      chunk_hash = excluded.chunk_hash,
+      chroma_vector_id = excluded.chroma_vector_id,
+      stale = 0
+  `);
+
+  database.transaction(() => {
+    for (const chunkId of staleChunkIds) {
+      markStale.run(folderId, chunkId);
+    }
+    for (const chunk of activeChunks) {
+      upsert.run(
+        chunk.chunkId,
+        chunk.documentId,
+        folderId,
+        chunk.chunkHash,
+        chunk.chromaVectorId
+      );
+    }
+  })();
+}
+
 // ===== EXPORT =====
 
 module.exports = {
@@ -226,4 +294,7 @@ module.exports = {
   getProjectConversations,
   deleteConversation,
   clearOldConversations,
+  // Chunk ledger
+  getActiveChunks,
+  reconcileChunks,
 };

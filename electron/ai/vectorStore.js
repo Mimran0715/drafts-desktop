@@ -1,13 +1,15 @@
 const crypto = require('crypto');
+const path = require('path');
 const { ChromaClient } = require('chromadb');
+const { getActiveChunks, reconcileChunks } = require('../database');
 
 const CHROMA_HOST = process.env.CHROMA_HOST || 'localhost';
 const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8000);
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 const HASH_EMBEDDING_DIMENSIONS = 256;
-const CHUNK_SIZE = 900;
-const CHUNK_OVERLAP = 150;
+const CHUNK_SIZE = 1000;
+const CHUNK_OVERLAP = 120;
 const EMBED_CONCURRENCY = 4;
 
 const indexCache = new Map();
@@ -132,39 +134,112 @@ async function embedTexts(texts) {
   return embeddings;
 }
 
-function chunkText(text) {
+function splitAtBoundary(text, maximumLength) {
+  if (text.length <= maximumLength) return text.length;
+  const minimumLength = Math.floor(maximumLength * 0.55);
+  const candidates = ['\n\n', '\n', '. ', '! ', '? ', ' '];
+
+  for (const separator of candidates) {
+    const index = text.lastIndexOf(separator, maximumLength);
+    if (index >= minimumLength) return index + separator.length;
+  }
+  return maximumLength;
+}
+
+function recursiveSplit(text) {
   const normalized = String(text).replace(/\r\n/g, '\n').trim();
   if (!normalized) return [];
 
   const chunks = [];
-  let start = 0;
+  let remaining = normalized;
+  while (remaining.length > CHUNK_SIZE) {
+    const end = splitAtBoundary(remaining, CHUNK_SIZE);
+    const content = remaining.slice(0, end).trim();
+    if (content) chunks.push(content);
 
-  while (start < normalized.length) {
-    const end = Math.min(normalized.length, start + CHUNK_SIZE);
-    const chunk = normalized.slice(start, end).trim();
-    if (chunk) chunks.push(chunk);
-    if (end === normalized.length) break;
-    start = Math.max(end - CHUNK_OVERLAP, start + 1);
+    const overlapStart = Math.max(0, end - CHUNK_OVERLAP);
+    remaining = remaining.slice(overlapStart).trimStart();
   }
-
+  if (remaining.trim()) chunks.push(remaining.trim());
   return chunks;
 }
 
-function buildChunks(documents) {
-  const chunks = [];
+function splitMarkdown(text) {
+  const normalized = String(text).replace(/\r\n/g, '\n').trim();
+  if (!normalized) return [];
 
+  const sections = [];
+  let heading = '';
+  let lines = [];
+  const flush = () => {
+    const content = lines.join('\n').trim();
+    if (content) sections.push({ heading, content });
+    lines = [];
+  };
+
+  for (const line of normalized.split('\n')) {
+    const match = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (match) {
+      flush();
+      heading = match[2].trim();
+      lines.push(line);
+    } else {
+      lines.push(line);
+    }
+  }
+  flush();
+
+  return sections.flatMap(section =>
+    recursiveSplit(section.content).map(content => ({
+      content,
+      sectionHeading: section.heading,
+    }))
+  );
+}
+
+function getDocumentChunks(doc) {
+  if (path.extname(doc.path || doc.name || '').toLowerCase() === '.md') {
+    return splitMarkdown(doc.content);
+  }
+  return recursiveSplit(doc.content).map(content => ({ content, sectionHeading: '' }));
+}
+
+function buildChunks(documents, projectPath) {
+  const chunks = [];
+  const folderId = hashText(projectPath);
+  const documentsById = new Map();
+
+  // searchContext appends the live editor document after disk documents. Keep
+  // the last version for a path so unsaved editor content is authoritative.
   for (const doc of documents) {
-    const docChunks = chunkText(doc.content);
-    docChunks.forEach((content, index) => {
-      const id = hashText(`${doc.path}:${index}:${content}`).slice(0, 32);
+    const documentId = hashText(doc.path || doc.name);
+    documentsById.set(documentId, { ...doc, documentId });
+  }
+
+  for (const doc of documentsById.values()) {
+    const { documentId } = doc;
+    const duplicateCounts = new Map();
+    const docChunks = getDocumentChunks(doc);
+    docChunks.forEach(({ content, sectionHeading }, index) => {
+      const chunkHash = hashText(content);
+      const occurrence = duplicateCounts.get(chunkHash) || 0;
+      duplicateCounts.set(chunkHash, occurrence + 1);
+      const id = hashText(`${documentId}:${chunkHash}:${occurrence}`);
       chunks.push({
         id,
         content,
+        documentId,
+        folderId,
+        chunkHash,
         metadata: {
-          documentName: doc.name,
-          documentPath: doc.path,
-          chunkIndex: index,
-          isLive: !!doc.isLive,
+          folder_id: folderId,
+          document_id: documentId,
+          section_heading: sectionHeading || '',
+          chunk_index: index,
+          last_modified: new Date(doc.modified || Date.now()).toISOString(),
+          document_name: doc.name,
+          document_path: doc.path,
+          is_live: !!doc.isLive,
         },
       });
     });
@@ -181,30 +256,63 @@ function computeFingerprint(documents, mode) {
   return hashText(`${mode}:${payload}`);
 }
 
-async function rebuildCollection(client, collectionName, chunks) {
-  try {
-    await client.deleteCollection({ name: collectionName });
-  } catch (error) {
-    // Collection may not exist yet.
-  }
-
-  const collection = await client.getOrCreateCollection({
+async function reconcileCollection(client, collectionName, projectPath, chunks) {
+  let collection = await client.getOrCreateCollection({
     name: collectionName,
     embeddingFunction: null,
   });
 
-  if (chunks.length === 0) {
-    return collection;
+  const folderId = hashText(projectPath);
+  const ledgerRows = getActiveChunks(folderId);
+
+  // Collections created by the old full-rebuild indexer have no ledger rows.
+  // Clear that one-time legacy state so fixed-window vectors cannot leak into
+  // structure-aware results as untracked orphans.
+  if (ledgerRows.length === 0 && await collection.count() > 0) {
+    await client.deleteCollection({ name: collectionName });
+    collection = await client.getOrCreateCollection({
+      name: collectionName,
+      embeddingFunction: null,
+    });
   }
 
-  const embeddings = await embedTexts(chunks.map(chunk => chunk.content));
+  const existingIds = new Set(ledgerRows.map(row => row.chunk_id));
+  const desiredIds = new Set(chunks.map(chunk => chunk.id));
+  const newChunks = chunks.filter(chunk => !existingIds.has(chunk.id));
+  const unchangedChunks = chunks.filter(chunk => existingIds.has(chunk.id));
+  const staleIds = ledgerRows
+    .map(row => row.chunk_id)
+    .filter(id => !desiredIds.has(id));
 
-  await collection.add({
-    ids: chunks.map(chunk => chunk.id),
-    documents: chunks.map(chunk => chunk.content),
-    metadatas: chunks.map(chunk => chunk.metadata),
-    embeddings,
-  });
+  if (newChunks.length > 0) {
+    const embeddings = await embedTexts(newChunks.map(chunk => chunk.content));
+    await collection.upsert({
+      ids: newChunks.map(chunk => chunk.id),
+      documents: newChunks.map(chunk => chunk.content),
+      metadatas: newChunks.map(chunk => chunk.metadata),
+      embeddings,
+    });
+  }
+  if (unchangedChunks.length > 0) {
+    await collection.update({
+      ids: unchangedChunks.map(chunk => chunk.id),
+      metadatas: unchangedChunks.map(chunk => chunk.metadata),
+    });
+  }
+  if (staleIds.length > 0) {
+    await collection.delete({ ids: staleIds });
+  }
+
+  reconcileChunks(
+    folderId,
+    chunks.map(chunk => ({
+      chunkId: chunk.id,
+      documentId: chunk.documentId,
+      chunkHash: chunk.chunkHash,
+      chromaVectorId: chunk.id,
+    })),
+    staleIds
+  );
 
   return collection;
 }
@@ -218,8 +326,8 @@ async function ensureIndexedCollection(client, collectionName, projectPath, docu
     return client.getCollection({ name: collectionName });
   }
 
-  const chunks = buildChunks(documents);
-  const collection = await rebuildCollection(client, collectionName, chunks);
+  const chunks = buildChunks(documents, projectPath);
+  const collection = await reconcileCollection(client, collectionName, projectPath, chunks);
   indexCache.set(projectPath, { fingerprint, collectionName });
   return collection;
 }
@@ -232,12 +340,12 @@ function formatQueryResults(query, result) {
 
   documents.forEach((document, index) => {
     const metadata = metadatas[index] || {};
-    const key = metadata.documentPath || metadata.documentName || `result-${index}`;
+    const key = metadata.document_path || metadata.document_name || `result-${index}`;
 
     if (!grouped.has(key)) {
       grouped.set(key, {
-        documentName: metadata.documentName || 'Project context',
-        documentPath: metadata.documentPath || key,
+        documentName: metadata.document_name || 'Project context',
+        documentPath: metadata.document_path || key,
         relevanceScore: 0,
         matches: [],
       });
@@ -247,7 +355,7 @@ function formatQueryResults(query, result) {
     const distance = typeof distances[index] === 'number' ? distances[index] : 1;
     item.relevanceScore += Math.max(0, 1 - distance);
     item.matches.push({
-      lineNumber: metadata.chunkIndex || 0,
+      lineNumber: metadata.chunk_index || 0,
       context: String(document || '').trim(),
       matches: 1,
       distance,
@@ -277,7 +385,7 @@ async function searchWithChroma(query, projectPath, documents, options = {}) {
 
   const collectionName = getCollectionName(projectPath);
   const collection = await ensureIndexedCollection(client, collectionName, projectPath, documents);
-  const chunks = buildChunks(documents);
+  const chunks = buildChunks(documents, projectPath);
 
   if (chunks.length === 0) {
     return {
@@ -310,7 +418,7 @@ async function getChromaStatus() {
 
     try {
       version = await client.version();
-    } catch (error) {
+    } catch {
       // Heartbeat succeeded; version is nice-to-have only.
     }
 
@@ -343,6 +451,9 @@ function invalidateProjectIndex(projectPath) {
 }
 
 module.exports = {
+  buildChunks,
+  recursiveSplit,
+  splitMarkdown,
   getChromaStatus,
   searchWithChroma,
   invalidateProjectIndex,
