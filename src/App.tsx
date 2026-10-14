@@ -119,6 +119,7 @@ function AppContent() {
   const editorRef = useRef<RichEditorHandle>(null);
   const streamQueueRef = useRef('');
   const streamIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamCompleteRef = useRef(false);
   const recentSuggestionsRef = useRef<string[]>([]);
   const rejectedSuggestionsRef = useRef<string[]>([]);
   const lastRejectedSuggestionRef = useRef<string | null>(null);
@@ -163,6 +164,7 @@ function AppContent() {
     }
     streamQueueRef.current = '';
     streamMessageIdRef.current = null;
+    streamCompleteRef.current = false;
   };
 
   const ensureStreamReveal = (messageId: string) => {
@@ -182,7 +184,7 @@ function AppContent() {
       if (nextChunk) {
         setMessages(msgs => msgs.map(msg =>
           msg.id === activeMessageId
-            ? { ...msg, content: msg.content + nextChunk, isStreaming: false }
+            ? { ...msg, content: msg.content + nextChunk, isStreaming: true }
             : msg
         ));
       }
@@ -190,6 +192,11 @@ function AppContent() {
       if (!streamQueueRef.current) {
         clearInterval(streamIntervalRef.current!);
         streamIntervalRef.current = null;
+        if (streamCompleteRef.current) {
+          setMessages(msgs => msgs.map(msg =>
+            msg.id === activeMessageId ? { ...msg, isStreaming: false } : msg
+          ));
+        }
       }
     }, STREAM_TICK_MS);
   };
@@ -570,6 +577,7 @@ function AppContent() {
       const response = window.electronAPI.chatStream
         ? await window.electronAPI.chatStream(message, context, streamId)
         : await window.electronAPI.chat(message, context);
+      streamCompleteRef.current = true;
       
       // Store thread ID for conversation continuity
       if (response.threadId) {
@@ -586,7 +594,7 @@ function AppContent() {
                   ? msg.content
                   : response.response || "I'm here to help with your writing!",
               hasGeneratedText: !!response.generatedText,
-              isStreaming: false
+              isStreaming: hasStreamedContent && streamQueueRef.current.length > 0
             }
           : msg
       ));

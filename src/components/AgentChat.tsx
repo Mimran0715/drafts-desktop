@@ -1,6 +1,8 @@
 // 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -31,14 +33,6 @@ const CHAT_PLACEHOLDERS = [
   'What story are you telling today?',
   'Let’s make something worth keeping.',
 ];
-
-function cleanChatOutput(content: string) {
-  return content
-    .replace(/^\s*\*\s+/gm, '- ')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/\*/g, '');
-}
 
 export default function AgentChat({
   messages,
@@ -120,9 +114,23 @@ export default function AgentChat({
                     <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
                   </div>
                 ) : (
-                  <div className="text-sm whitespace-pre-wrap">
-                    {message.role === 'agent' ? cleanChatOutput(message.content) : message.content}
-                  </div>
+                  message.role === 'agent' && !message.isStreaming ? (
+                    <ReactMarkdown
+                      className="chat-markdown text-sm"
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ children, ...props }) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        )
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  ) : (
+                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  )
                 )}
               </div>
             </div>

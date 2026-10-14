@@ -441,6 +441,104 @@ select:focus-visible,
   border-color: color-mix(in srgb, var(--chat-user-bg) 70%, transparent);
 }
 
+.chat-markdown {
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.chat-markdown > :first-child {
+  margin-top: 0;
+}
+
+.chat-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown p,
+.chat-markdown ul,
+.chat-markdown ol,
+.chat-markdown blockquote,
+.chat-markdown pre,
+.chat-markdown table {
+  margin: 0.65em 0;
+}
+
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  margin: 0.9em 0 0.35em;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.chat-markdown h1 { font-size: 1.4em; }
+.chat-markdown h2 { font-size: 1.25em; }
+.chat-markdown h3 { font-size: 1.1em; }
+
+.chat-markdown ul,
+.chat-markdown ol {
+  padding-left: 1.5em;
+}
+
+.chat-markdown ul { list-style: disc; }
+.chat-markdown ol { list-style: decimal; }
+.chat-markdown li + li { margin-top: 0.25em; }
+.chat-markdown li > p { margin: 0.25em 0; }
+
+.chat-markdown a {
+  color: var(--btn-primary-bg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-markdown blockquote {
+  padding-left: 0.85em;
+  border-left: 3px solid var(--border-main);
+  color: var(--sidebar-text-muted);
+}
+
+.chat-markdown code {
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--chat-agent-text) 9%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.chat-markdown pre {
+  overflow-x: auto;
+  padding: 0.8em;
+  border: 1px solid color-mix(in srgb, var(--border-main) 60%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--chat-agent-text) 7%, transparent);
+}
+
+.chat-markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.chat-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.chat-markdown th,
+.chat-markdown td {
+  padding: 0.4em 0.55em;
+  border: 1px solid var(--border-main);
+  text-align: left;
+}
+
+.chat-markdown hr {
+  margin: 0.9em 0;
+  border: 0;
+  border-top: 1px solid var(--border-main);
+}
+
 .chat-composer {
   background: color-mix(in srgb, var(--chat-bg) 88%, #ffffff);
 }
